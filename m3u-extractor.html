@@ -42,7 +42,6 @@
     .status{margin-top:10px;color:var(--muted)}
     .note{margin-top:14px;color:var(--muted);font-size:12px}
 
-    /* Zone debug (peut être masquée si tout va bien) */
     #debugWrap{margin-top:10px;display:none}
     #debug{white-space:pre-wrap;background:#0c0f16;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;font-size:12px;color:#9aa3b2}
 
@@ -101,7 +100,6 @@
       <div class="row"><div class="label">Device ID</div><div id="did" class="value"></div><button class="copybtn" type="button" data-copy="#did">Copier</button></div>
     </div>
 
-    <!-- Debug visible si erreur -->
     <div id="debugWrap">
       <div class="muted">Debug</div>
       <pre id="debug"></pre>
@@ -161,11 +159,10 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
 });
 
 /* ---------- Extracteur ---------- */
-const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← ta vraie URL, SANS slash final
+const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev';
 
 const $ = (s)=> document.querySelector(s);
-const statusEl = $('#status');
-const siteLink = $('#siteLink'), macEl = $('#mac'), macPlainEl = $('#macplain'), dkeyEl = $('#dkey'), didEl = $('#did');
+const statusEl = $('#status'), siteLink = $('#siteLink'), macEl = $('#mac'), macPlainEl = $('#macplain'), dkeyEl = $('#dkey'), didEl = $('#did');
 const fileInput = $('#file'), drop = $('#drop'), preview = $('#preview');
 const runAiBtn = $('#runAi'), clearBtn = $('#clear'), toggleCamera = $('#toggleCamera');
 const debugWrap = $('#debugWrap'), debugEl = $('#debug');
@@ -173,33 +170,53 @@ const debugWrap = $('#debugWrap'), debugEl = $('#debug');
 let currentFile = null;
 let isBusy = false;
 
+// --- NOUVELLE FONCTION DE RÉINITIALISATION CENTRALE ---
+function resetAppState() {
+  // Réinitialisation de l'état logique
+  isBusy = false;
+  currentFile = null;
+  fileInput.value = '';
+
+  // Réinitialisation de l'interface utilisateur
+  runAiBtn.disabled = false;
+  preview.removeAttribute('src');
+  siteLink.textContent=''; siteLink.removeAttribute('href');
+  macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
+  
+  // Nettoyage des messages
+  setStatus('Prêt.');
+  hideDebug();
+  console.log('Application state has been reset.');
+}
+
+// --- NOUVEAU FIX AUTOMATIQUE POUR MOBILE ---
+// Se déclenche quand on revient sur la page (après un changement d'onglet ou une mise en veille)
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    console.log('Page restaurée depuis le cache (BFCache). Forcing state reset.');
+    resetAppState();
+  }
+});
+
+
 function setStatus(text, cls=''){ statusEl.className='status '+(cls||''); statusEl.textContent=text; }
 function showDebug(msg){ debugWrap.style.display='block'; debugEl.textContent = (debugEl.textContent? debugEl.textContent+'\n':'') + msg; }
 function hideDebug(){ debugWrap.style.display='none'; debugEl.textContent=''; }
 
-/* Caméra ON/OFF (galerie par défaut) */
 toggleCamera.addEventListener('change', ()=>{
   if(toggleCamera.checked){ fileInput.setAttribute('capture','environment'); }
   else { fileInput.removeAttribute('capture'); }
 });
 
-/* Copier */
 document.addEventListener('click', e=>{
   const b = e.target.closest('[data-copy]'); if(!b) return;
   e.preventDefault();
   const node = document.querySelector(b.getAttribute('data-copy')); if(!node) return;
-  const txt = node.textContent.trim(); if(!txt) return;
+  const txt = (node.textContent || node.value || '').trim(); if(!txt) return;
   navigator.clipboard?.writeText(txt);
   setStatus('Copié !','ok'); setTimeout(()=>setStatus('Prêt.'),900);
 });
 
-/* Reset résultats */
-function resetOut(){
-  siteLink.textContent=''; siteLink.removeAttribute('href');
-  macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
-}
-
-/* File -> DataURL */
 function readFileAsDataURL(file){
   return new Promise((resolve,reject)=>{
     const fr = new FileReader();
@@ -209,24 +226,18 @@ function readFileAsDataURL(file){
   });
 }
 
-/* Compression (max 1000px, JPEG 0.68) — encore plus sûr sur mobile */
 async function compressImageToDataURL(file, maxSize=1000, quality=0.68){
   const dataUrl = await readFileAsDataURL(file);
-
   const img = new Image();
-  img.decoding = 'async';
   img.src = dataUrl;
-  try { await img.decode(); } catch { await new Promise(r=>{ img.onload=r; img.onerror=r; }); }
+  await new Promise(r => { img.onload = r; img.onerror = r; });
 
-  const width = img.naturalWidth || img.width;
-  const height = img.naturalHeight || img.height;
-
-  if (Math.max(width, height) <= maxSize && dataUrl.length < 3 * 1024 * 1024) {
+  if (Math.max(img.width, img.height) <= maxSize && dataUrl.length < 3 * 1024 * 1024) {
     return dataUrl;
   }
 
-  const scale = Math.min(1, maxSize / Math.max(width, height));
-  const w = Math.round(width * scale), h = Math.round(height * scale);
+  const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
 
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
@@ -238,7 +249,6 @@ async function compressImageToDataURL(file, maxSize=1000, quality=0.68){
   return out;
 }
 
-/* Normaliser URL */
 function normalizeUrlMaybe(u){
   if(!u) return '';
   const s = String(u).trim();
@@ -247,13 +257,6 @@ function normalizeUrlMaybe(u){
   return s;
 }
 
-/* Ping Worker (on n’arrête pas si ça échoue, on tente quand même) */
-async function pingWorker(){
-  try { const res = await fetch(WORKER_URL + '/ping', { method:'GET', cache:'no-store' }); return res.ok; }
-  catch (e) { showDebug('Ping échoué: '+(e.message||e)); return false; }
-}
-
-/* Analyse */
 async function runOpenAIVision(e){
   e?.preventDefault();
   if (isBusy) return;
@@ -261,24 +264,17 @@ async function runOpenAIVision(e){
   const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
 
-  resetOut(); hideDebug();
+  // Ne pas réinitialiser les résultats ici, seulement le statut et le debug
+  hideDebug();
   setStatus('Analyse OpenAI…');
-  isBusy = true; runAiBtn.disabled = true;
+  isBusy = true;
+  runAiBtn.disabled = true;
 
   try{
-    const pingOk = await pingWorker();
-    if (!pingOk) setStatus('Ping KO, tentative quand même…');
-
     const dataUrl = await compressImageToDataURL(file, 1000, 0.68);
-
-    // garde-fou client
     if (dataUrl.length > 7 * 1024 * 1024) {
-      setStatus('Image trop lourde après compression. Recadre ou réduis.', 'warn');
-      showDebug('DataURL length: ' + dataUrl.length);
-      return;
+      throw new Error('Image trop lourde après compression. Recadre ou réduis.');
     }
-
-    // Aperçu stable (toujours DataURL)
     preview.src = dataUrl;
 
     const res = await fetch(WORKER_URL, {
@@ -295,12 +291,18 @@ async function runOpenAIVision(e){
       try { const j = JSON.parse(txt); if (j?.error) msg = `${msg} : ${j.error} (status ${j.status || res.status})`; }
       catch { msg = `${msg} (HTTP ${res.status})`; }
       if (res.status === 413) msg = 'Image trop lourde. Réessaie après recadrage / réduction.';
+      
       setStatus(msg, 'warn');
       showDebug('HTTP '+res.status+'\n'+txt.slice(0,500));
+      // On ne réinitialise pas tout, on laisse l'utilisateur voir l'erreur
+      isBusy = false;
+      runAiBtn.disabled = false;
       return;
     }
 
     const j = await res.json();
+    siteLink.textContent=''; siteLink.removeAttribute('href');
+    macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
 
     const link = normalizeUrlMaybe(j.site);
     if(link){ siteLink.textContent = link; siteLink.href = link; }
@@ -317,55 +319,52 @@ async function runOpenAIVision(e){
     }
 
     setStatus('Terminé ✔', 'ok');
-  }catch(err){
-    const msg = (err && (err.message || err.name)) ? `${err.name}: ${err.message}` : 'Échec réseau';
-    setStatus('Erreur réseau : ' + msg, 'warn');
-    showDebug(String(err));
-  }finally{
-    // reset état bouton
-    isBusy = false; runAiBtn.disabled = false;
+
+  } catch(err) {
+    // --- GESTION D'ERREUR AMÉLIORÉE ---
+    // C'est le cas typique d'une connexion "morte" sur mobile.
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        setStatus('La connexion était en veille. Veuillez réessayer.', 'warn');
+    } else {
+        const msg = (err && (err.message || err.name)) ? `${err.name}: ${err.message}` : 'Échec réseau';
+        setStatus('Erreur : ' + msg, 'warn');
+        showDebug(String(err));
+    }
+  } finally {
+    // Dans tous les cas, on débloque l'interface.
+    isBusy = false;
+    runAiBtn.disabled = false;
   }
 }
 
-/* Sélection fichier — toujours DataURL + reset fort des états (évite le bug au 2e essai) */
-fileInput.addEventListener('change', async ()=>{
-  if(fileInput.files?.length){
-    currentFile = fileInput.files[0];
-    const durl = await readFileAsDataURL(currentFile);
-    preview.src = durl;
-    hideDebug();
-    isBusy = false; runAiBtn.disabled = false;  // au cas où
-    setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
+async function handleFileSelect(file) {
+  if (file) {
+    resetAppState(); // On réinitialise TOUT avant de charger une nouvelle image
+    currentFile = file;
+    try {
+        const durl = await readFileAsDataURL(currentFile);
+        preview.src = durl;
+        setStatus('Image chargée. Cliquez sur “Analyser”.');
+    } catch (e) {
+        setStatus('Erreur de lecture du fichier.', 'warn');
+    }
   }
-});
+}
 
-/* Drag & drop — convertit en DataURL (pas d’ObjectURL) */
+fileInput.addEventListener('change', () => handleFileSelect(fileInput.files[0]));
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
-drop.addEventListener('drop', async e=>{
+drop.addEventListener('drop', e=>{
   e.preventDefault(); drop.classList.remove('drag');
-  if(e.dataTransfer.files?.length){
-    currentFile = e.dataTransfer.files[0];
-    const durl = await readFileAsDataURL(currentFile);
-    preview.src = durl;
-    fileInput.value = '';       // permet de re-choisir le même fichier plus tard
-    hideDebug();
-    isBusy = false; runAiBtn.disabled = false;
-    setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
-  }
+  handleFileSelect(e.dataTransfer.files[0]);
 });
 
-/* Boutons */
 runAiBtn.addEventListener('click', runOpenAIVision);
-clearBtn.addEventListener('click', (e)=>{
-  e.preventDefault();
-  // reset fort pour que le 2e/3e essai marche aussi sur mobile
-  fileInput.value=''; currentFile=null;
-  preview.removeAttribute('src');
-  resetOut(); hideDebug();
-  isBusy = false; runAiBtn.disabled = false;
-  setStatus('Prêt.');
+clearBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetAppState(); // Le bouton "Effacer" utilise maintenant la fonction centrale
 });
+
 
 /* ---------- Générateur M3U (inchangé) ---------- */
 (function(){
@@ -377,11 +376,7 @@ clearBtn.addEventListener('click', (e)=>{
     const res = {username:'', password:'', origin:'', raw:''};
     try{
       const url = new URL(u);
-      const m = /^([a-z]+:)(\/\/)?([^/]+)/i.exec(u);
-      const protoRaw = (m && m[1]) ? m[1].toLowerCase() : (url.protocol || 'http:');
-      const proto = protoRaw.endsWith(':') ? protoRaw + '//' : protoRaw;
-      const hostPort = m ? m[3] : (url.host || '');
-      res.origin = proto + hostPort;
+      res.origin = url.origin;
       res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
       res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
       res.raw = u;
@@ -401,13 +396,13 @@ clearBtn.addEventListener('click', (e)=>{
     }
     const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
     out.value = `⚠️ TEST ${duration} ⚠️\n\n`+
-                `➡️ Code :\n`+
-                `${nameLine}`+
-                `Nom d’utilisateur : ${username}\n`+
-                `Mot de passe : ${password}\n`+
-                `URL du serveur : ${origin} \n\n`+
-                `➡️ Lien M3U :\n`+
-                `${raw}`;
+              `➡️ Code :\n`+
+              `${nameLine}`+
+              `Nom d’utilisateur : ${username}\n`+
+              `Mot de passe : ${password}\n`+
+              `URL du serveur : ${origin} \n\n`+
+              `➡️ Lien M3U :\n`+
+              `${raw}`;
     status.innerHTML = '<span class="ok">Template prêt ✔</span>';
     fillExtras({raw, username, password, origin});
   }
@@ -420,75 +415,17 @@ clearBtn.addEventListener('click', (e)=>{
     f_url.value  = data.origin || '';
     f_combo.value = `Username : ${data.username} / Password : ${data.password} / URL : ${data.origin}`;
   }
-
-  function copyPlain(text, onDone){
-    if(!text) return;
-    const done = () => { if(onDone) onDone(); };
-    if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(text).then(done).catch(fallback); }
-    else { fallback(); }
-    function fallback(){
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta); ta.focus(); ta.select();
-      try{ document.execCommand('copy'); }catch(e){}
-      document.body.removeChild(ta); done();
-    }
-  }
-
-  function copyFromSelector(sel){
-    const el = document.querySelector(sel); if(!el) return;
-    copyPlain(el.value||'', () => {
-      const old = status.textContent; status.textContent = 'Copié !';
-      setTimeout(()=> status.textContent = old || '', 900);
-    });
-  }
-
-  function clearAll(){ urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; }
-
+  
   document.getElementById('generateBtn').addEventListener('click', build);
-  document.getElementById('copyBtn').addEventListener('click', ()=> copyPlain(out.value||'', () => {
-    const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
-  }));
-  document.getElementById('clearBtn').addEventListener('click', clearAll);
-  document.addEventListener('click', (e)=>{ const btn = e.target.closest('button[data-copy]'); if(!btn) return; const sel = btn.getAttribute('data-copy'); copyFromSelector(sel); });
+  document.getElementById('copyBtn').addEventListener('click', ()=> {
+      if(!out.value) return;
+      navigator.clipboard.writeText(out.value);
+      const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
+  });
+  document.getElementById('clearBtn').addEventListener('click', ()=> { urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; });
   urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
   urlInput.addEventListener('paste', ()=>{ setTimeout(build, 0); });
 })();
-
-/* ---------- Smart Reset pour Mobile (Fix BFCache) ---------- */
-window.addEventListener('pageshow', (event) => {
-  // 'persisted' est true quand la page est restaurée depuis le cache (BFCache)
-  if (event.persisted) {
-    console.log('Page restaurée depuis BFCache, réinitialisation de l\'état...');
-    
-    // On force la réinitialisation de l'état "busy"
-    isBusy = false;
-    
-    // On réactive le bouton au cas où il serait bloqué
-    const runAiBtn = document.querySelector('#runAi');
-    if (runAiBtn) {
-      runAiBtn.disabled = false;
-    }
-    
-    // On réinitialise le statut (optionnel, mais propre)
-    const statusEl = document.querySelector('#status');
-    if (statusEl) {
-      statusEl.className = 'status';
-      statusEl.textContent = 'Prêt.';
-    }
-    
-    // On cache le debug au cas où
-    const debugWrap = document.querySelector('#debugWrap');
-    if (debugWrap) {
-      debugWrap.style.display = 'none';
-      debugWrap.textContent = '';
-    }
-  }
-  
-});  
-  
 </script>
 </body>
 </html>
-
-
