@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" referrerpolicy="strict-origin-when-cross-origin">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Services & Modules Odoo 17 — Paiement sécurisé via Payhip</title>
-  <meta name="description" content="Payez en 1 clic pour nos services et modules Odoo 17. Paiement sécurisé via Payhip (Stripe/PayPal)." />
+  <title>Nos plans d’abonnement IPTV — Paiement sécurisé via Payhip</title>
+  <meta name="description" content="Abonnements IPTV (1–24 mois). 25 000+ chaînes, 100 000+ VOD, sans coupure, support pendant toute la durée. Paiement PayPal ou Stripe via Payhip." />
   <link rel="preconnect" href="https://payhip.com" />
   <style>
-    :root { --bg:#0f1115; --card:#151922; --text:#eaf0ff; --muted:#9aa3b2; --accent:#22c55e; }
+    :root { --bg:#0f1115; --card:#151922; --text:#eaf0ff; --muted:#9aa3b2; --accent:#22c55e; --pop:#f59e0b; }
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
     .wrap{max-width:1100px;margin:auto;padding:28px}
@@ -15,87 +15,107 @@
     h1{margin:0 0 8px;font-size:28px}
     .lead{margin:0;color:var(--muted)}
     .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:24px}
-    .card{background:var(--card);border:1px solid #202636;border-radius:16px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:190px}
+    .card{position:relative;background:var(--card);border:1px solid #202636;border-radius:16px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:220px}
+    .badge{position:absolute;top:12px;right:12px;background:var(--pop);color:#111;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}
     .title{font-weight:800;margin:0 0 10px;line-height:1.25}
-    .desc{color:var(--muted);font-size:14px;margin:0 0 14px}
+    .desc{color:var(--muted);font-size:14px;margin:0 0 8px}
+    .price{font-weight:800;margin:0 0 14px}
     .btn{display:inline-block;text-align:center;padding:12px 16px;border-radius:12px;background:var(--accent);color:#fff;text-decoration:none;font-weight:800}
     .btn:active{transform:translateY(1px)}
     footer{margin-top:26px;text-align:center;color:var(--muted);font-size:12px}
-    .langs{margin-top:6px;font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <h1>Nos plans d’abonnement IPTV ✅</h1>
-      <p class="lead">Cliquez “Acheter Maintenant” pour un paiement sécurisé via Payhip.</p>
+      <p class="lead">25 000+ chaînes & 100 000+ VOD • Sans coupure • Support pendant toute la durée • Paiement via PayPal ou Stripe</p>
     </header>
 
     <section class="grid">
-      <!-- 1) Setup & Integrate WhatsApp - Odoo 17 -->
+      <!-- 24 mois -->
       <article class="card">
+        <span class="badge">Le + économique</span>
         <div>
-          <h3 class="title">Abonnement - 24 Mois</h3>
+          <h3 class="title">Abonnement — 24 mois</h3>
+          <p class="desc">Accès complet 2 ans. 25 000+ chaînes, 100 000+ VOD, stabilité optimale, support prioritaire.</p>
+          <p class="price">35 € — PayPal ou Stripe</p>
         </div>
         <a class="btn payhip-buy-button"
            href="https://payhip.com/b/mr8BJ"
            data-product="mr8BJ"
-           data-theme="green">Acheter Maintenant</a>
+           data-theme="green"
+           aria-label="Acheter l’abonnement 24 mois (35 euros)">Acheter Maintenant</a>
       </article>
 
-      <!-- 2) Set Up, Install & Advanced Customization of the Odoo 17 Dynamic Dashboard -->
+      <!-- 12 mois ++ -->
       <article class="card">
         <div>
-          <h3 class="title">Abonnement - 12 Mois++</h3>
+          <h3 class="title">Abonnement — 12 mois ++</h3>
+          <p class="desc">1 an + bonus (selon promo). 25 000+ chaînes, 100 000+ VOD, sans coupure, support continu.</p>
+          <p class="price">25 € — PayPal ou Stripe</p>
         </div>
         <a class="btn payhip-buy-button"
            href="https://payhip.com/b/Y4SRm"
            data-product="Y4SRm"
-           data-theme="green">Acheter Maintenant</a>
+           data-theme="green"
+           aria-label="Acheter l’abonnement 12 mois ++ (25 euros)">Acheter Maintenant</a>
       </article>
 
-      <!-- 3) Set Up, Install & Pro Customization of the Odoo 17 Dynamic Dashboard -->
+      <!-- 12 mois -->
       <article class="card">
         <div>
-          <h3 class="title">Abonnement - 12 Mois</h3>
+          <h3 class="title">Abonnement — 12 mois</h3>
+          <p class="desc">1 an d’accès complet. 25 000+ chaînes et 100 000+ VOD, streaming fluide, assistance incluse.</p>
+          <p class="price">20 € — PayPal ou Stripe</p>
         </div>
         <a class="btn payhip-buy-button"
            href="https://payhip.com/b/1Jgxh"
            data-product="1Jgxh"
-           data-theme="green">Acheter Maintenant</a>
+           data-theme="green"
+           aria-label="Acheter l’abonnement 12 mois (20 euros)">Acheter Maintenant</a>
       </article>
 
-      <!-- 4) Set Up, Install & Basic Customization of the Odoo 17 Dynamic Dashboard -->
+      <!-- 6 mois -->
       <article class="card">
         <div>
-          <h3 class="title">Abonnement - 6 Mois</h3>
+          <h3 class="title">Abonnement — 6 mois</h3>
+          <p class="desc">Semestre complet. Même catalogue complet (25 k+ chaînes / 100 k+ VOD) avec support.</p>
+          <p class="price">15 € — PayPal ou Stripe</p>
         </div>
         <a class="btn payhip-buy-button"
            href="https://payhip.com/b/VrqWf"
            data-product="VrqWf"
-           data-theme="green">Acheter Maintenant</a>
+           data-theme="green"
+           aria-label="Acheter l’abonnement 6 mois (15 euros)">Acheter Maintenant</a>
       </article>
 
-      <!-- 5) Setup & Install Automatic Database Backup - Odoo 17 -->
+      <!-- 3 mois -->
       <article class="card">
         <div>
-          <h3 class="title">Abonnement - 3 Mois</h3>
+          <h3 class="title">Abonnement — 3 mois</h3>
+          <p class="desc">Trimestre d’accès. Idéal pour tester longuement la stabilité et le support.</p>
+          <p class="price">10 € — PayPal ou Stripe</p>
         </div>
         <a class="btn payhip-buy-button"
            href="https://payhip.com/b/94M07"
            data-product="94M07"
-           data-theme="green">Acheter Maintenant</a>
+           data-theme="green"
+           aria-label="Acheter l’abonnement 3 mois (10 euros)">Acheter Maintenant</a>
       </article>
 
-      <!-- 6) Setup & Install Base Accounting Kit - Odoo 17 -->
+      <!-- 1 mois -->
       <article class="card">
         <div>
-          <h3 class="title">Abonnement - 1 Mois</h3>
+          <h3 class="title">Abonnement — 1 mois</h3>
+          <p class="desc">Accès mensuel. Même catalogue complet, streaming fluide, support durant tout le mois.</p>
+          <p class="price">5 € — PayPal ou Stripe</p>
         </div>
         <a class="btn payhip-buy-button"
            href="https://payhip.com/b/FHSIN"
            data-product="FHSIN"
-           data-theme="green">Acheter Maintenant</a>
+           data-theme="green"
+           aria-label="Acheter l’abonnement 1 mois (5 euros)">Acheter Maintenant</a>
       </article>
     </section>
 
