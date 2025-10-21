@@ -2,12 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IPTV Utils — Extraction & M3U</title>
-  <meta name="description" content="Extraction depuis image (OpenAI proxy) et Générateur de template M3U." />
+  <meta name="description" content="Deux outils : Extraction depuis image (OpenAI proxy) et Générateur de template M3U." />
   <style>
     :root { --bg:#0f1115; --card:#161a23; --text:#e9eef5; --muted:#9aa3b2; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; }
     *{box-sizing:border-box}
@@ -45,10 +42,11 @@
     .status{margin-top:10px;color:var(--muted)}
     .note{margin-top:14px;color:var(--muted);font-size:12px}
 
+    /* Zone debug (peut être masquée si tout va bien) */
     #debugWrap{margin-top:10px;display:none}
     #debug{white-space:pre-wrap;background:#0c0f16;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;font-size:12px;color:#9aa3b2}
 
-    /* M3U */
+    /* M3U generator */
     .grid{display:grid;grid-template-columns:1fr;gap:16px}
     @media (min-width: 720px){ .grid{grid-template-columns:1fr 1fr} }
     label{display:block;font-weight:600;margin:16px 0 8px}
@@ -103,7 +101,11 @@
       <div class="row"><div class="label">Device ID</div><div id="did" class="value"></div><button class="copybtn" type="button" data-copy="#did">Copier</button></div>
     </div>
 
-    <div id="debugWrap"><div class="muted">Debug</div><pre id="debug"></pre></div>
+    <!-- Debug visible si erreur -->
+    <div id="debugWrap">
+      <div class="muted">Debug</div>
+      <pre id="debug"></pre>
+    </div>
 
     <p class="note">Par défaut, vous choisissez dans la galerie/fichiers. Activez “Utiliser la caméra” pour ouvrir directement l’appareil photo.</p>
   </section>
@@ -148,7 +150,7 @@
 </div>
 
 <script>
-/* Tabs */
+/* ---------- Onglets ---------- */
 document.querySelectorAll('.tabbtn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
@@ -158,7 +160,7 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
   });
 });
 
-/* ==== Extracteur ==== */
+/* ---------- Extracteur ---------- */
 const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← ta vraie URL, SANS slash final
 
 const $ = (s)=> document.querySelector(s);
@@ -175,7 +177,7 @@ function setStatus(text, cls=''){ statusEl.className='status '+(cls||''); status
 function showDebug(msg){ debugWrap.style.display='block'; debugEl.textContent = (debugEl.textContent? debugEl.textContent+'\n':'') + msg; }
 function hideDebug(){ debugWrap.style.display='none'; debugEl.textContent=''; }
 
-/* Caméra ON/OFF */
+/* Caméra ON/OFF (galerie par défaut) */
 toggleCamera.addEventListener('change', ()=>{
   if(toggleCamera.checked){ fileInput.setAttribute('capture','environment'); }
   else { fileInput.removeAttribute('capture'); }
@@ -191,14 +193,13 @@ document.addEventListener('click', e=>{
   setStatus('Copié !','ok'); setTimeout(()=>setStatus('Prêt.'),900);
 });
 
-/* Reset résultats + libération mémoire */
+/* Reset résultats */
 function resetOut(){
   siteLink.textContent=''; siteLink.removeAttribute('href');
   macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
 }
-async function microYield(){ return new Promise(r=> setTimeout(r,0)); } // laisse le GC respirer
 
-/* Fichier → DataURL */
+/* File -> DataURL */
 function readFileAsDataURL(file){
   return new Promise((resolve,reject)=>{
     const fr = new FileReader();
@@ -208,18 +209,9 @@ function readFileAsDataURL(file){
   });
 }
 
-/* Compression WebP (fallback JPEG) */
-function canvasToDataURLSafe(canvas, prefer='image/webp', q=0.7){
-  try{
-    const supported = canvas.toDataURL(prefer, q);
-    if (supported && supported.startsWith('data:image/webp')) return supported;
-  }catch(_){} // certains navigateurs throw
-  return canvas.toDataURL('image/jpeg', Math.min(Math.max(q,0.5),0.8));
-}
-
-async function compressImageToDataURL(file, maxSize=1000, quality=0.7){
+/* Compression (max 1000px, JPEG 0.68) — encore plus sûr sur mobile */
+async function compressImageToDataURL(file, maxSize=1000, quality=0.68){
   const dataUrl = await readFileAsDataURL(file);
-  await microYield();
 
   const img = new Image();
   img.decoding = 'async';
@@ -229,8 +221,7 @@ async function compressImageToDataURL(file, maxSize=1000, quality=0.7){
   const width = img.naturalWidth || img.width;
   const height = img.naturalHeight || img.height;
 
-  // Petite image => OK direct si < 2.8MB
-  if (Math.max(width, height) <= maxSize && dataUrl.length < 2.8 * 1024 * 1024) {
+  if (Math.max(width, height) <= maxSize && dataUrl.length < 3 * 1024 * 1024) {
     return dataUrl;
   }
 
@@ -242,10 +233,8 @@ async function compressImageToDataURL(file, maxSize=1000, quality=0.7){
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, w, h);
 
-  let out = canvasToDataURLSafe(canvas, 'image/webp', quality); // WebP si possible
-  if (out.length > 3.2 * 1024 * 1024) { out = canvasToDataURLSafe(canvas, 'image/webp', 0.6); }
-  canvas.width = canvas.height = 0; // aide le GC
-  await microYield();
+  let out = canvas.toDataURL('image/jpeg', quality);
+  if (out.length > 3.2 * 1024 * 1024) { out = canvas.toDataURL('image/jpeg', 0.6); }
   return out;
 }
 
@@ -258,29 +247,10 @@ function normalizeUrlMaybe(u){
   return s;
 }
 
-/* Ping Worker (diag) */
+/* Ping Worker (on n’arrête pas si ça échoue, on tente quand même) */
 async function pingWorker(){
   try { const res = await fetch(WORKER_URL + '/ping', { method:'GET', cache:'no-store' }); return res.ok; }
   catch (e) { showDebug('Ping échoué: '+(e.message||e)); return false; }
-}
-
-/* Retry helper (x3) */
-async function fetchWithRetry(url, options, retries=2){
-  let lastErr;
-  for(let i=0;i<=retries;i++){
-    try{
-      const res = await fetch(url, options);
-      if(!res.ok) return res; // status != 2xx -> on renvoie direct (géré ailleurs)
-      return res;
-    }catch(e){
-      lastErr = e;
-      // Types d’erreurs “réseau” à retenter
-      const msg = (e && (e.message||e.name||'error')).toString();
-      if(!/TypeError|ProgressEvent|NetworkError|Failed to fetch/i.test(msg)) break;
-      await new Promise(r=> setTimeout(r, 200 * Math.pow(3,i))); // 200ms -> 600ms -> 1800ms
-    }
-  }
-  throw lastErr || new Error('Network failed');
 }
 
 /* Analyse */
@@ -291,7 +261,6 @@ async function runOpenAIVision(e){
   const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
 
-  // Reset fort avant de commencer
   resetOut(); hideDebug();
   setStatus('Analyse OpenAI…');
   isBusy = true; runAiBtn.disabled = true;
@@ -300,33 +269,32 @@ async function runOpenAIVision(e){
     const pingOk = await pingWorker();
     if (!pingOk) setStatus('Ping KO, tentative quand même…');
 
-    const dataUrl = await compressImageToDataURL(file, 1000, 0.7);
+    const dataUrl = await compressImageToDataURL(file, 1000, 0.68);
 
-    // Garde-fou dur pour Workers (10MB max body). On reste < ~3.5MB coté client.
-    if (dataUrl.length > 3.8 * 1024 * 1024) {
-      setStatus('Image trop lourde après compression. Recadre/réduis.', 'warn');
+    // garde-fou client
+    if (dataUrl.length > 7 * 1024 * 1024) {
+      setStatus('Image trop lourde après compression. Recadre ou réduis.', 'warn');
       showDebug('DataURL length: ' + dataUrl.length);
       return;
     }
 
-    // Aperçu (DataURL stable)
+    // Aperçu stable (toujours DataURL)
     preview.src = dataUrl;
 
-    const res = await fetchWithRetry(WORKER_URL, {
+    const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept':'application/json' },
       body: JSON.stringify({ imageDataUrl: dataUrl }),
-      cache: 'no-store',
-      redirect: 'follow',
-      keepalive: false
-    }, 2);
+      cache: 'no-cache',
+      redirect: 'follow'
+    });
 
     if(!res.ok){
       const txt = await res.text().catch(()=> '');
       let msg = 'Erreur OpenAI/Proxy';
       try { const j = JSON.parse(txt); if (j?.error) msg = `${msg} : ${j.error} (status ${j.status || res.status})`; }
       catch { msg = `${msg} (HTTP ${res.status})`; }
-      if (res.status === 413) msg = 'Image trop lourde. Recadre / réduis.';
+      if (res.status === 413) msg = 'Image trop lourde. Réessaie après recadrage / réduction.';
       setStatus(msg, 'warn');
       showDebug('HTTP '+res.status+'\n'+txt.slice(0,500));
       return;
@@ -354,25 +322,24 @@ async function runOpenAIVision(e){
     setStatus('Erreur réseau : ' + msg, 'warn');
     showDebug(String(err));
   }finally{
-    // Libération mémoire “agressive” pour éviter les soucis au 2ᵉ essai
-    await microYield();
+    // reset état bouton
     isBusy = false; runAiBtn.disabled = false;
   }
 }
 
-/* Sélection fichier */
+/* Sélection fichier — toujours DataURL + reset fort des états (évite le bug au 2e essai) */
 fileInput.addEventListener('change', async ()=>{
   if(fileInput.files?.length){
     currentFile = fileInput.files[0];
     const durl = await readFileAsDataURL(currentFile);
     preview.src = durl;
     hideDebug();
-    isBusy = false; runAiBtn.disabled = false;
+    isBusy = false; runAiBtn.disabled = false;  // au cas où
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
   }
 });
 
-/* Drag & drop */
+/* Drag & drop — convertit en DataURL (pas d’ObjectURL) */
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
 drop.addEventListener('drop', async e=>{
@@ -381,7 +348,7 @@ drop.addEventListener('drop', async e=>{
     currentFile = e.dataTransfer.files[0];
     const durl = await readFileAsDataURL(currentFile);
     preview.src = durl;
-    fileInput.value = ''; // permet de re-choisir le même fichier
+    fileInput.value = '';       // permet de re-choisir le même fichier plus tard
     hideDebug();
     isBusy = false; runAiBtn.disabled = false;
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
@@ -390,18 +357,17 @@ drop.addEventListener('drop', async e=>{
 
 /* Boutons */
 runAiBtn.addEventListener('click', runOpenAIVision);
-clearBtn.addEventListener('click', async (e)=>{
+clearBtn.addEventListener('click', (e)=>{
   e.preventDefault();
-  // reset fort pour que les essais suivants fonctionnent
+  // reset fort pour que le 2e/3e essai marche aussi sur mobile
   fileInput.value=''; currentFile=null;
   preview.removeAttribute('src');
   resetOut(); hideDebug();
   isBusy = false; runAiBtn.disabled = false;
-  await microYield();
   setStatus('Prêt.');
 });
 
-/* ==== M3U (inchangé) ==== */
+/* ---------- Générateur M3U (inchangé) ---------- */
 (function(){
   const $id = (id) => document.getElementById(id);
   const status = $id('m3uStatus'), nameInput = $id('playlistName'), durationSel = $id('duration'), urlInput = $id('m3uInput'), out = $id('output');
@@ -491,4 +457,5 @@ clearBtn.addEventListener('click', async (e)=>{
 </script>
 </body>
 </html>
+
 
