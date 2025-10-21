@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IPTV Utils — Extraction & M3U</title>
-  <meta name="description" content="Deux outils : extraction depuis image (site/MAC/clé/ID) et générateur de template M3U." />
+  <meta name="description" content="Deux outils : Extraction depuis image (OpenAI proxy) et Générateur de template M3U." />
   <style>
     :root { --bg:#0f1115; --card:#161a23; --text:#e9eef5; --muted:#9aa3b2; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; }
     *{box-sizing:border-box}
@@ -15,7 +15,7 @@
     .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
     .tabbtn{
       cursor:pointer;background:#2a3144;border:1px solid rgba(255,255,255,.06);
-      color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;
+      color:#fff;padding:10px 14px;border-radius:12px;font-weight:600
     }
     .tabbtn.active{background:var(--accent)}
     .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
@@ -24,30 +24,26 @@
     .muted{color:var(--muted);font-size:13px}
     .ok{color:var(--ok)} .warn{color:var(--warn)}
 
-    /* Buttons */
-    button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:600;color:white;background:var(--accent)}
+    button{cursor:pointer;border:0;border-radius:10px;padding:12px 16px;font-weight:600;color:white;background:var(--accent)}
     button.secondary{background:#2a3144}
     .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 
-    /* Extractor layout */
-    .drop{border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:18px;text-align:center;cursor:pointer}
+    /* Extractor */
+    .drop{border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;text-align:center;cursor:pointer}
     .drop.drag{border-color:var(--accent);background:#0e1320}
-    img#preview{max-width:100%;border-radius:12px;margin-top:10px}
+    img#preview{max-width:100%;border-radius:12px;margin-top:12px}
     .result{margin-top:16px;background:#0e1118;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
-    .row{
-      display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 0;
-    }
-    .result .row + .row{
-      border-top:1px solid rgba(255,255,255,.10);margin-top:10px;padding-top:14px;
-    }
+    .row{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 0}
+    .result .row + .row{border-top:1px solid rgba(255,255,255,.10);margin-top:10px;padding-top:14px}
     .row .label{color:var(--muted)}
     .row .value{
       font-family:ui-monospace,Menlo,Consolas,monospace;background:#101421;border-radius:8px;
-      padding:10px 12px;min-height:38px;display:flex;align-items:center;word-break:break-all;
+      padding:10px 12px;min-height:42px;display:flex;align-items:center;word-break:break-all
     }
     .row a.value{color:var(--accent);text-decoration:none}
-    .copybtn{background:#2a3144;padding:8px 10px;border-radius:8px;font-size:12px}
-    .status{margin-top:8px;color:var(--muted)}
+    .copybtn{background:#2a3144;padding:10px 12px;border-radius:8px;font-size:13px}
+    .status{margin-top:10px;color:var(--muted)}
+    .note{margin-top:14px;color:var(--muted);font-size:12px}
 
     /* M3U generator */
     .grid{display:grid;grid-template-columns:1fr;gap:16px}
@@ -55,7 +51,7 @@
     label{display:block;font-weight:600;margin:16px 0 8px}
     input[type="text"], input[type="url"], textarea, select{
       width:100%;background:#0e1118;color:var(--text);border:1px solid rgba(255,255,255,.08);
-      border-radius:12px;padding:12px 14px;font-size:15px;outline:none;transition:border-color .2s;
+      border-radius:12px;padding:12px 14px;font-size:15px;outline:none;transition:border-color .2s
     }
     textarea{min-height:200px;resize:vertical}
     input:focus, textarea:focus, select:focus{border-color:var(--accent)}
@@ -64,35 +60,30 @@
     .extras .title{font-weight:600;margin-top:10px}
     .footer{margin-top:22px;font-size:12px;color:var(--muted);text-align:center}
   </style>
-
-  <!-- Tesseract.js for local OCR -->
-  <script src="https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="container">
-
   <!-- Tabs -->
   <div class="tabs">
     <button class="tabbtn active" data-tab="extractor">Extraction depuis image</button>
-    <button class="tabbtn" data-tab="m3u">Générateur de Template M3U</button>
+    <button class="tabbtn" data-tab="m3u">Générateur M3U</button>
   </div>
 
-  <!-- ====== Extractor Card ====== -->
+  <!-- ===== Extractor (OpenAI only) ===== -->
   <section id="extractor" class="card">
     <h1>Extraction depuis capture d’écran IPTV</h1>
-    <p class="lead">Téléversez l’image → obtenez <b>Site</b>, <b>MAC</b>, <b>Device Key</b>, <b>Device ID</b>. Si l’image est floue, utilisez <b>OpenAI (proxy)</b>.</p>
+    <p class="lead">Téléversez l’image → obtenez <b>Site</b>, <b>MAC</b>, <b>Device Key</b>, <b>Device ID</b> via <b>OpenAI (proxy)</b>.</p>
 
     <label class="muted">Image</label>
     <div id="drop" class="drop">
-      Glissez-déposez ici ou <u>cliquez pour choisir</u><br/>
-      <input id="file" type="file" accept="image/*" hidden>
+      Touchez ici pour choisir / prendre une photo<br/>
+      <input id="file" type="file" accept="image/*" capture="environment" hidden>
     </div>
     <img id="preview" alt="Aperçu">
 
     <div class="btns">
-      <button id="run">Extraire (local)</button>
-      <button id="runAi" class="secondary">OpenAI (proxy)</button>
-      <button id="clear" class="secondary">Effacer</button>
+      <button id="runAi" type="button" class="secondary">Analyser avec OpenAI (proxy)</button>
+      <button id="clear" type="button" class="secondary">Effacer</button>
     </div>
     <div id="status" class="status">Prêt.</div>
 
@@ -105,34 +96,34 @@
       <div class="row">
         <div class="label">Adresse MAC</div>
         <div id="mac" class="value"></div>
-        <button class="copybtn" data-copy="#mac">Copier</button>
+        <button class="copybtn" type="button" data-copy="#mac">Copier</button>
       </div>
       <div class="row">
         <div class="label">MAC (sans « : »)</div>
         <div id="macplain" class="value"></div>
-        <button class="copybtn" data-copy="#macplain">Copier</button>
+        <button class="copybtn" type="button" data-copy="#macplain">Copier</button>
       </div>
       <div class="row">
         <div class="label">Clé appareil</div>
         <div id="dkey" class="value"></div>
-        <button class="copybtn" data-copy="#dkey">Copier</button>
+        <button class="copybtn" type="button" data-copy="#dkey">Copier</button>
       </div>
       <div class="row">
         <div class="label">Device ID</div>
         <div id="did" class="value"></div>
-        <button class="copybtn" data-copy="#did">Copier</button>
+        <button class="copybtn" type="button" data-copy="#did">Copier</button>
       </div>
     </div>
-    <p class="muted" style="margin-top:14px">Tout se passe <b>localement</b> (OpenAI uniquement via votre proxy Cloudflare).</p>
+    <p class="note">Analyse via votre proxy Cloudflare. Sur mobile, l’image reste chargée après le clic.</p>
   </section>
 
-  <!-- ====== M3U Generator Card ====== -->
+  <!-- ===== M3U Generator ===== -->
   <section id="m3u" class="card" style="display:none">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
       <h1>Générateur de Template M3U</h1>
       <span id="m3uStatus" class="muted">En attente d'un lien…</span>
     </div>
-    <p class="lead">Collez un <strong>seul</strong> lien M3U et générez un <strong>unique</strong> template. Boutons : Générer, Copier, Effacer.</p>
+    <p class="lead">Collez un <strong>seul</strong> lien M3U et générez un <strong>unique</strong> template.</p>
 
     <label for="playlistName">Nom de la playlist</label>
     <input type="text" id="playlistName" placeholder="Ex. Digistore" value="Digistore" />
@@ -147,9 +138,9 @@
     <input type="url" id="m3uInput" placeholder="Collez ici le lien M3U complet (http/https)…" inputmode="url" autocomplete="off" spellcheck="false"/>
 
     <div class="btns">
-      <button id="generateBtn">Générer</button>
-      <button id="copyBtn">Copier</button>
-      <button id="clearBtn" class="secondary">Effacer</button>
+      <button id="generateBtn" type="button">Générer</button>
+      <button id="copyBtn" type="button">Copier</button>
+      <button id="clearBtn" type="button" class="secondary">Effacer</button>
     </div>
 
     <label for="output" style="margin-top:18px;">Template généré</label>
@@ -159,35 +150,32 @@
       <div class="title">Copie rapide (valeurs seules)</div>
       <div class="row2">
         <input id="x_m3u" type="text" readonly placeholder="Lien M3U (brut)" />
-        <button data-copy="#x_m3u">Copier M3U</button>
+        <button data-copy="#x_m3u" type="button">Copier M3U</button>
       </div>
       <div class="row2">
         <input id="x_user" type="text" readonly placeholder="Username" />
-        <button data-copy="#x_user">Copier Username</button>
+        <button data-copy="#x_user" type="button">Copier Username</button>
       </div>
       <div class="row2">
         <input id="x_pass" type="text" readonly placeholder="Password" />
-        <button data-copy="#x_pass">Copier Password</button>
+        <button data-copy="#x_pass" type="button">Copier Password</button>
       </div>
       <div class="row2">
         <input id="x_url" type="text" readonly placeholder="URL (avec port s'il existe)" />
-        <button data-copy="#x_url">Copier URL</button>
+        <button data-copy="#x_url" type="button">Copier URL</button>
       </div>
       <div class="row2">
         <input id="x_combo" type="text" readonly placeholder="Username : X / Password : Y / URL : http://..." />
-        <button data-copy="#x_combo">Copier la ligne</button>
+        <button data-copy="#x_combo" type="button">Copier la ligne</button>
       </div>
     </div>
 
     <div class="footer">⚠️ Cette page formate uniquement vos informations. Elle ne vérifie pas la validité d’un abonnement.</div>
   </section>
-
 </div>
 
 <script>
-/* -----------------------------------------------------------
-   GENERAL: Tabs
------------------------------------------------------------ */
+/* ---------- Tabs ---------- */
 const tabs = document.querySelectorAll('.tabbtn');
 tabs.forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -200,13 +188,12 @@ tabs.forEach(btn=>{
   });
 });
 
-/* -----------------------------------------------------------
-   EXTRACTOR (Image -> site/MAC/key/ID)
------------------------------------------------------------ */
-const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // <-- votre URL avec https://
+/* ---------- Extractor (OpenAI only, mobile-safe) ---------- */
+const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // <-- remplacez par VOTRE URL (avec https://)
 
-const $    = (s)=> document.querySelector(s);
-const setStatus = (t, cls='') => { const el=$('#status'); el.className='status '+(cls||''); el.textContent=t; };
+const $ = (s)=> document.querySelector(s);
+const statusEl = $('#status');
+const setStatus = (t, cls='') => { statusEl.className='status '+(cls||''); statusEl.textContent=t; };
 
 const siteLink   = $('#siteLink');
 const macEl      = $('#mac');
@@ -216,16 +203,21 @@ const didEl      = $('#did');
 const fileInput  = $('#file');
 const drop       = $('#drop');
 const preview    = $('#preview');
+const runAiBtn   = $('#runAi');
+const clearBtn   = $('#clear');
+
+let currentFile = null;
+let isBusy = false;
 
 function copyFrom(sel){
   const node = document.querySelector(sel); if(!node) return;
-  const txt = node.textContent.trim();
-  if(!txt) return;
+  const txt = node.textContent.trim(); if(!txt) return;
   navigator.clipboard?.writeText(txt);
   setStatus('Copié !', 'ok'); setTimeout(()=>setStatus('Prêt.'), 900);
 }
 document.addEventListener('click', e=>{
   const b = e.target.closest('[data-copy]'); if(!b) return;
+  e.preventDefault();
   copyFrom(b.getAttribute('data-copy'));
 });
 
@@ -247,79 +239,30 @@ function readFile(file){
   });
 }
 
-// better URL recovery from noisy OCR
-function extractSiteFrom(text){
-  let t = (text||'')
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/\s*:\s*\/\s*\/\s*/g, '://')
-    .replace(/\s*\.\s*/g, '.')
-    .replace(/\s*\/\s*/g, '/');
-  const m1 = t.match(/\bhttps?:\/\/[a-z0-9.-]+(?:\/[^\s]*)?/i);
-  if (m1) return m1[0];
-  const m2 = t.match(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?/i);
-  if (m2) return 'https://' + m2[0].replace(/^https?:\/\//i,'');
-  return '';
+function normalizeUrlMaybe(u){
+  if(!u) return '';
+  const s = String(u).trim();
+  if(/^https?:\/\//i.test(s)) return s;
+  if(/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(s)) return 'https://' + s;
+  return s;
 }
 
-async function runOCR(){
-  resetOut();
-  const file = fileInput.files?.[0];
+async function runOpenAIVision(e){
+  e?.preventDefault();
+  if(isBusy) return;
+
+  const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
-  preview.src = URL.createObjectURL(file);
 
-  setStatus('OCR en cours…');
-  const { data } = await Tesseract.recognize(file, 'eng+fra');
-  const text = (data && data.text || '').replace(/\s+/g,' ').trim();
+  if(!preview.src) preview.src = URL.createObjectURL(file);
 
-  setStatus('Extraction…');
-  fillFromText(text);
-  doneOrWarn();
-}
-
-function fillFromText(text){
-  const site = extractSiteFrom(text);
-  if(site){ siteLink.textContent = site; siteLink.href = site; }
-
-  const norm = text.replace(/O/g,'0').replace(/l|I/g,'1').replace(/—|–/g,'-');
-  const macMatch = norm.match(/\b([0-9a-fA-F]{2}[:\-]){5}[0-9a-fA-F]{2}\b/);
-  const mac = macMatch ? macMatch[0].replace(/-/g,':').toLowerCase() : '';
-  macEl.textContent = mac;
-  macPlainEl.textContent = mac ? mac.replace(/:/g,'').toUpperCase() : '';
-
-  const keyMatch = norm.match(/\b(?:clé\s*(?:de|l’|l')\s*(?:appareil|device)\s*[:\-]?\s*)?(\d{5,7})\b/i);
-  dkeyEl.textContent = keyMatch ? keyMatch[1] : '';
-
-  let id = '';
-  const idLabel = norm.match(/\b(?:device\s*id|id\.)[:\s]*([0-9a-fA-F\s]{12,})/i);
-  if(idLabel){
-    const onlyHex = idLabel[1].replace(/[^0-9a-fA-F\s]/g,' ').trim();
-    const pairs = onlyHex.split(/\s+/).filter(x=>/^[0-9a-fA-F]{2}$/.test(x));
-    if(pairs.length >= 6) id = pairs.join(' ').toUpperCase();
-  } else {
-    const compact = norm.match(/\b[0-9a-fA-F]{12,}\b/);
-    if(compact) id = compact[0].toUpperCase();
-  }
-  didEl.textContent = id;
-}
-
-function doneOrWarn(){
-  if(!siteLink.textContent && !macEl.textContent && !dkeyEl.textContent && !didEl.textContent){
-    setStatus('Rien trouvé. Essayez une image plus nette.', 'warn');
-  } else {
-    setStatus('Terminé ✔', 'ok');
-  }
-}
-
-async function runOpenAIVision(){
   resetOut();
-  const file = fileInput.files?.[0];
-  if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
-  preview.src = URL.createObjectURL(file);
-
   setStatus('Analyse OpenAI…');
-  const b64 = await readFile(file);
+  isBusy = true;
+  runAiBtn.disabled = true;
 
   try{
+    const b64 = await readFile(file);
     const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -334,46 +277,63 @@ async function runOpenAIVision(){
 
     const j = await res.json();
 
-    if(j.site){
-      const link = j.site.startsWith('http') ? j.site : ('https://' + j.site);
-      siteLink.textContent = link;
-      siteLink.href = link;
-    }
+    const link = normalizeUrlMaybe(j.site);
+    if(link){ siteLink.textContent = link; siteLink.href = link; }
+
     const mac = (j.mac || '').toLowerCase();
     macEl.textContent = mac;
     macPlainEl.textContent = mac ? mac.replace(/:/g,'').toUpperCase() : '';
     dkeyEl.textContent = j.device_key || '';
     didEl.textContent  = j.device_id || '';
 
-    if(!siteLink.textContent){
-      const guess = extractSiteFrom(JSON.stringify(j));
-      if(guess){ siteLink.textContent = guess; siteLink.href = guess; }
+    if(!siteLink.textContent && j){
+      const guess = String(JSON.stringify(j))
+        .replace(/[\u2013\u2014]/g,'-')
+        .match(/\b(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s"]*)?/i);
+      if(guess){
+        const g = normalizeUrlMaybe(guess[0]);
+        siteLink.textContent = g; siteLink.href = g;
+      }
     }
 
-    doneOrWarn();
-  }catch(e){
-    setStatus('Erreur réseau : ' + e.message, 'warn');
+    setStatus('Terminé ✔', 'ok');
+  }catch(err){
+    setStatus('Erreur réseau : ' + (err?.message || err), 'warn');
+  }finally{
+    isBusy = false;
+    runAiBtn.disabled = false;
   }
 }
 
-/* UI wiring for extractor */
-drop.addEventListener('click', ()=> fileInput.click());
+/* Mobile-safe UI */
+drop.addEventListener('click', (e)=>{ e.preventDefault(); fileInput.click(); });
+drop.addEventListener('touchstart', (e)=>{}, {passive:true});
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
 drop.addEventListener('drop', async e=>{
   e.preventDefault(); drop.classList.remove('drag');
-  if(e.dataTransfer.files?.length){ fileInput.files = e.dataTransfer.files; preview.src = await readFile(e.dataTransfer.files[0]); }
+  if(e.dataTransfer.files?.length){
+    currentFile = e.dataTransfer.files[0];
+    preview.src = URL.createObjectURL(currentFile);
+  }
 });
-fileInput.addEventListener('change', async ()=>{ if(fileInput.files?.[0]) preview.src = await readFile(fileInput.files[0]); });
-document.querySelector('#run').addEventListener('click', runOCR);
-document.querySelector('#runAi').addEventListener('click', runOpenAIVision);
-document.querySelector('#clear').addEventListener('click', ()=>{
-  fileInput.value=''; preview.removeAttribute('src'); resetOut(); setStatus('Prêt.');
+fileInput.addEventListener('change', async ()=>{
+  if(fileInput.files?.[0]){
+    currentFile = fileInput.files[0];
+    preview.src = await readFile(currentFile); // dataURL -> persists on mobile
+    setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
+  }
+});
+runAiBtn.addEventListener('click', runOpenAIVision);
+clearBtn.addEventListener('click', (e)=>{
+  e.preventDefault();
+  fileInput.value=''; currentFile=null;
+  preview.removeAttribute('src');
+  resetOut();
+  setStatus('Prêt.');
 });
 
-/* -----------------------------------------------------------
-   M3U GENERATOR
------------------------------------------------------------ */
+/* ---------- M3U Generator ---------- */
 (function(){
   function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   onReady(function(){
@@ -409,17 +369,14 @@ document.querySelector('#clear').addEventListener('click', ()=>{
     function build(){
       const link = (urlInput.value||'').trim();
       if(!link){
-        status.textContent = "Aucun lien M3U fourni.";
-        out.value=''; fillExtras(null); return;
+        status.textContent = "Aucun lien M3U fourni."; out.value=''; fillExtras(null); return;
       }
       const {username, password, origin, raw} = extract(link);
       const name = (nameInput.value||'Digistore').trim();
       const duration = (durationSel?.value || '12H');
       if(!origin || !username || !password){
         out.value = `Veuillez fournir un lien M3U valide avec "username" et "password".\n\nExemple :\nhttp://serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts`;
-        status.innerHTML = '<span class="warn">Lien invalide</span>';
-        fillExtras(null);
-        return;
+        status.innerHTML = '<span class="warn">Lien invalide</span>'; fillExtras(null); return;
       }
       const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
       out.value = `⚠️ TEST ${duration} ⚠️\n\n`+
@@ -435,10 +392,7 @@ document.querySelector('#clear').addEventListener('click', ()=>{
     }
 
     function fillExtras(data){
-      if(!data){
-        f_m3u.value = f_user.value = f_pass.value = f_url.value = f_combo.value = '';
-        return;
-      }
+      if(!data){ f_m3u.value = f_user.value = f_pass.value = f_url.value = f_combo.value = ''; return; }
       f_m3u.value = data.raw || '';
       f_user.value = data.username || '';
       f_pass.value = data.password || '';
@@ -457,8 +411,7 @@ document.querySelector('#clear').addEventListener('click', ()=>{
         ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
         document.body.appendChild(ta); ta.focus(); ta.select();
         try{ document.execCommand('copy'); }catch(e){}
-        document.body.removeChild(ta);
-        done();
+        document.body.removeChild(ta); done();
       }
     }
 
@@ -471,23 +424,17 @@ document.querySelector('#clear').addEventListener('click', ()=>{
       });
     }
 
-    function clearAll(){
-      urlInput.value=''; out.value=''; fillExtras(null);
-      status.textContent="En attente d'un lien…";
-    }
+    function clearAll(){ urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; }
 
     $id('generateBtn').addEventListener('click', build);
     $id('copyBtn').addEventListener('click', ()=> copyPlain(out.value||'', () => {
-      const old = status.textContent; status.textContent = 'Copié !';
-      setTimeout(()=> status.textContent = old || '', 900);
+      const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
     }));
     $id('clearBtn').addEventListener('click', clearAll);
 
     document.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button[data-copy]');
-      if(!btn) return;
-      const sel = btn.getAttribute('data-copy');
-      copyFromSelector(sel);
+      const btn = e.target.closest('button[data-copy]'); if(!btn) return;
+      const sel = btn.getAttribute('data-copy'); copyFromSelector(sel);
     });
 
     urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
@@ -497,6 +444,7 @@ document.querySelector('#clear').addEventListener('click', ()=>{
 </script>
 </body>
 </html>
+
 
 
 
