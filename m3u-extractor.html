@@ -3,155 +3,414 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Générateur de Template M3U</title>
-  <meta name="description" content="Collez un lien M3U et obtenez un template prêt à copier avec un bouton Copier." />
+  <title>IPTV Utils — Extraction & M3U</title>
+  <meta name="description" content="Deux outils : extraction depuis image (site/MAC/clé/ID) et générateur de template M3U." />
   <style>
     :root { --bg:#0f1115; --card:#161a23; --text:#e9eef5; --muted:#9aa3b2; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); }
-    .container { max-width: 900px; margin: 40px auto; padding: 24px; }
-    .card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); padding: 20px; }
-    h1 { margin: 0 0 10px; font-size: 28px; }
-    p.lead { margin: 0 0 20px; color: var(--muted); }
-    label { display:block; font-weight:600; margin: 16px 0 8px; }
-    .row { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 720px) { .row { grid-template-columns: 1fr 1fr; } }
-    input[type="text"], textarea, input[type="url"] {
-      width: 100%; background: #0e1118; color: var(--text); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px; padding: 12px 14px; font-size: 15px; outline: none; transition: border-color .2s;
-    }
-    textarea { min-height: 200px; resize: vertical; }
-    input[readonly], textarea[readonly] { opacity: .95; }
-    input:focus, textarea:focus { border-color: var(--accent); }
-    .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top: 14px; }
-    button { cursor:pointer; border: 0; border-radius: 12px; padding: 10px 14px; font-weight:600; color: white; background: var(--accent);
-             transition: transform .02s ease-in-out, filter .15s; }
-    button:active { transform: translateY(1px); }
-    button.secondary { background: #303649; }
-    .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
-    .status { margin-left:auto; font-size: 13px; color: var(--muted); }
-    .ok { color: var(--ok); }
-    .warn { color: var(--warn); }
-    .footer { margin-top: 22px; font-size: 12px; color: var(--muted); text-align:center; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Helvetica,Arial;background:var(--bg);color:var(--text)}
+    a{color:inherit}
 
-    /* Extras under template */
-    .extras { margin-top: 18px; display: grid; gap: 12px; }
-    .extras .row2 { display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center; }
-    .extras .title { font-weight:600; margin-top: 10px; }
+    .container{max-width:1000px;margin:24px auto;padding:16px}
+    .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+    .tabbtn{
+      cursor:pointer;background:#2a3144;border:1px solid rgba(255,255,255,.06);
+      color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;
+    }
+    .tabbtn.active{background:var(--accent)}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 6px}
+    p.lead{margin:0 0 14px;color:var(--muted)}
+    .muted{color:var(--muted);font-size:13px}
+    .ok{color:var(--ok)} .warn{color:var(--warn)}
+
+    /* Buttons */
+    button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:600;color:white;background:var(--accent)}
+    button.secondary{background:#2a3144}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+    /* Extractor layout */
+    .drop{border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:18px;text-align:center;cursor:pointer}
+    .drop.drag{border-color:var(--accent);background:#0e1320}
+    img#preview{max-width:100%;border-radius:12px;margin-top:10px}
+    .result{margin-top:16px;background:#0e1118;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
+    .row{
+      display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 0;
+    }
+    .result .row + .row{
+      border-top:1px solid rgba(255,255,255,.10);margin-top:10px;padding-top:14px;
+    }
+    .row .label{color:var(--muted)}
+    .row .value{
+      font-family:ui-monospace,Menlo,Consolas,monospace;background:#101421;border-radius:8px;
+      padding:10px 12px;min-height:38px;display:flex;align-items:center;word-break:break-all;
+    }
+    .row a.value{color:var(--accent);text-decoration:none}
+    .copybtn{background:#2a3144;padding:8px 10px;border-radius:8px;font-size:12px}
+    .status{margin-top:8px;color:var(--muted)}
+
+    /* M3U generator */
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media (min-width: 720px){ .grid{grid-template-columns:1fr 1fr} }
+    label{display:block;font-weight:600;margin:16px 0 8px}
+    input[type="text"], input[type="url"], textarea, select{
+      width:100%;background:#0e1118;color:var(--text);border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;padding:12px 14px;font-size:15px;outline:none;transition:border-color .2s;
+    }
+    textarea{min-height:200px;resize:vertical}
+    input:focus, textarea:focus, select:focus{border-color:var(--accent)}
+    .extras{margin-top:18px;display:grid;gap:12px}
+    .extras .row2{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+    .extras .title{font-weight:600;margin-top:10px}
+    .footer{margin-top:22px;font-size:12px;color:var(--muted);text-align:center}
   </style>
+
+  <!-- Tesseract.js for local OCR -->
+  <script src="https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom: 8px;">
-        <h1>Générateur de Template M3U</h1>
-        <span id="status" class="status">En attente d'un lien…</span>
-      </div>
-      <p class="lead">Collez un <strong>seul</strong> lien M3U et générez un <strong>unique</strong> template. Boutons : Générer, Copier, Effacer.</p>
+<div class="container">
 
-      <label for="playlistName">Nom de la playlist</label>
-      <input type="text" id="playlistName" placeholder="Ex. Digistore" value="Digistore" />
-
-      <label for="duration">Durée de test</label>
-      <select id="duration">
-        <option>1H</option>
-        <option>2H</option>
-        <option>3H</option>
-        <option>6H</option>
-        <option selected>12H</option>
-        <option>24H</option>
-      </select>
-
-      <label for="m3u">Lien M3U</label>
-      <input type="url" id="m3u" placeholder="Collez ici le lien M3U complet (http/https)…" inputmode="url" autocomplete="off" spellcheck="false"/>
-
-      <div class="btns">
-        <button id="generateBtn">Générer</button>
-        <button id="copyBtn">Copier</button>
-        <button id="clearBtn" class="secondary">Effacer</button>
-      </div>
-
-      <label for="output" style="margin-top:18px;">Template généré</label>
-      <textarea id="output" readonly placeholder="Le template apparaîtra ici…"></textarea>
-
-      <!-- EXTRAS: copy-only fields (sans portal /c) -->
-      <div class="extras">
-        <div class="title">Copie rapide (valeurs seules)</div>
-
-        <div class="row2">
-          <input id="x_m3u" type="text" readonly placeholder="Lien M3U (brut)" />
-          <button data-copy="#x_m3u">Copier M3U</button>
-        </div>
-
-        <div class="row2">
-          <input id="x_user" type="text" readonly placeholder="Username" />
-          <button data-copy="#x_user">Copier Username</button>
-        </div>
-
-        <div class="row2">
-          <input id="x_pass" type="text" readonly placeholder="Password" />
-          <button data-copy="#x_pass">Copier Password</button>
-        </div>
-
-        <div class="row2">
-          <input id="x_url" type="text" readonly placeholder="URL (avec port s'il existe)" />
-          <button data-copy="#x_url">Copier URL</button>
-        </div>
-
-        <div class="row2">
-          <input id="x_combo" type="text" readonly placeholder="Username : X / Password : Y / URL : http://..." />
-          <button data-copy="#x_combo">Copier la ligne</button>
-        </div>
-      </div>
-
-      <div class="footer">⚠️ Cette page formate uniquement vos informations. Elle ne vérifie pas la validité d’un abonnement.</div>
-    </div>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tabbtn active" data-tab="extractor">Extraction depuis image</button>
+    <button class="tabbtn" data-tab="m3u">Générateur de Template M3U</button>
   </div>
 
+  <!-- ====== Extractor Card ====== -->
+  <section id="extractor" class="card">
+    <h1>Extraction depuis capture d’écran IPTV</h1>
+    <p class="lead">Téléversez l’image → obtenez <b>Site</b>, <b>MAC</b>, <b>Device Key</b>, <b>Device ID</b>. Si l’image est floue, utilisez <b>OpenAI (proxy)</b>.</p>
+
+    <label class="muted">Image</label>
+    <div id="drop" class="drop">
+      Glissez-déposez ici ou <u>cliquez pour choisir</u><br/>
+      <input id="file" type="file" accept="image/*" hidden>
+    </div>
+    <img id="preview" alt="Aperçu">
+
+    <div class="btns">
+      <button id="run">Extraire (local)</button>
+      <button id="runAi" class="secondary">OpenAI (proxy)</button>
+      <button id="clear" class="secondary">Effacer</button>
+    </div>
+    <div id="status" class="status">Prêt.</div>
+
+    <div class="result" id="results">
+      <div class="row">
+        <div class="label">Site</div>
+        <a id="siteLink" class="value" href="#" target="_blank" rel="noopener noreferrer"></a>
+        <span></span>
+      </div>
+      <div class="row">
+        <div class="label">Adresse MAC</div>
+        <div id="mac" class="value"></div>
+        <button class="copybtn" data-copy="#mac">Copier</button>
+      </div>
+      <div class="row">
+        <div class="label">MAC (sans « : »)</div>
+        <div id="macplain" class="value"></div>
+        <button class="copybtn" data-copy="#macplain">Copier</button>
+      </div>
+      <div class="row">
+        <div class="label">Clé appareil</div>
+        <div id="dkey" class="value"></div>
+        <button class="copybtn" data-copy="#dkey">Copier</button>
+      </div>
+      <div class="row">
+        <div class="label">Device ID</div>
+        <div id="did" class="value"></div>
+        <button class="copybtn" data-copy="#did">Copier</button>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:14px">Tout se passe <b>localement</b> (OpenAI uniquement via votre proxy Cloudflare).</p>
+  </section>
+
+  <!-- ====== M3U Generator Card ====== -->
+  <section id="m3u" class="card" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+      <h1>Générateur de Template M3U</h1>
+      <span id="m3uStatus" class="muted">En attente d'un lien…</span>
+    </div>
+    <p class="lead">Collez un <strong>seul</strong> lien M3U et générez un <strong>unique</strong> template. Boutons : Générer, Copier, Effacer.</p>
+
+    <label for="playlistName">Nom de la playlist</label>
+    <input type="text" id="playlistName" placeholder="Ex. Digistore" value="Digistore" />
+
+    <label for="duration">Durée de test</label>
+    <select id="duration">
+      <option>1H</option><option>2H</option><option>3H</option>
+      <option>6H</option><option selected>12H</option><option>24H</option>
+    </select>
+
+    <label for="m3uInput">Lien M3U</label>
+    <input type="url" id="m3uInput" placeholder="Collez ici le lien M3U complet (http/https)…" inputmode="url" autocomplete="off" spellcheck="false"/>
+
+    <div class="btns">
+      <button id="generateBtn">Générer</button>
+      <button id="copyBtn">Copier</button>
+      <button id="clearBtn" class="secondary">Effacer</button>
+    </div>
+
+    <label for="output" style="margin-top:18px;">Template généré</label>
+    <textarea id="output" readonly placeholder="Le template apparaîtra ici…"></textarea>
+
+    <div class="extras">
+      <div class="title">Copie rapide (valeurs seules)</div>
+      <div class="row2">
+        <input id="x_m3u" type="text" readonly placeholder="Lien M3U (brut)" />
+        <button data-copy="#x_m3u">Copier M3U</button>
+      </div>
+      <div class="row2">
+        <input id="x_user" type="text" readonly placeholder="Username" />
+        <button data-copy="#x_user">Copier Username</button>
+      </div>
+      <div class="row2">
+        <input id="x_pass" type="text" readonly placeholder="Password" />
+        <button data-copy="#x_pass">Copier Password</button>
+      </div>
+      <div class="row2">
+        <input id="x_url" type="text" readonly placeholder="URL (avec port s'il existe)" />
+        <button data-copy="#x_url">Copier URL</button>
+      </div>
+      <div class="row2">
+        <input id="x_combo" type="text" readonly placeholder="Username : X / Password : Y / URL : http://..." />
+        <button data-copy="#x_combo">Copier la ligne</button>
+      </div>
+    </div>
+
+    <div class="footer">⚠️ Cette page formate uniquement vos informations. Elle ne vérifie pas la validité d’un abonnement.</div>
+  </section>
+
+</div>
+
 <script>
-// Version simple : 1 URL → 1 template. Trois boutons: Générer / Copier / Effacer
+/* -----------------------------------------------------------
+   GENERAL: Tabs
+----------------------------------------------------------- */
+const tabs = document.querySelectorAll('.tabbtn');
+tabs.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    tabs.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.getAttribute('data-tab');
+    document.querySelectorAll('section.card').forEach(s=>{
+      s.style.display = (s.id === tab) ? '' : 'none';
+    });
+  });
+});
+
+/* -----------------------------------------------------------
+   EXTRACTOR (Image -> site/MAC/key/ID)
+----------------------------------------------------------- */
+const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // <-- votre URL avec https://
+
+const $    = (s)=> document.querySelector(s);
+const setStatus = (t, cls='') => { const el=$('#status'); el.className='status '+(cls||''); el.textContent=t; };
+
+const siteLink   = $('#siteLink');
+const macEl      = $('#mac');
+const macPlainEl = $('#macplain');
+const dkeyEl     = $('#dkey');
+const didEl      = $('#did');
+const fileInput  = $('#file');
+const drop       = $('#drop');
+const preview    = $('#preview');
+
+function copyFrom(sel){
+  const node = document.querySelector(sel); if(!node) return;
+  const txt = node.textContent.trim();
+  if(!txt) return;
+  navigator.clipboard?.writeText(txt);
+  setStatus('Copié !', 'ok'); setTimeout(()=>setStatus('Prêt.'), 900);
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-copy]'); if(!b) return;
+  copyFrom(b.getAttribute('data-copy'));
+});
+
+function resetOut(){
+  siteLink.textContent = '';
+  siteLink.removeAttribute('href');
+  macEl.textContent = '';
+  macPlainEl.textContent = '';
+  dkeyEl.textContent = '';
+  didEl.textContent = '';
+}
+
+function readFile(file){
+  return new Promise((resolve,reject)=>{
+    const fr = new FileReader();
+    fr.onload = ()=> resolve(fr.result);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+
+// better URL recovery from noisy OCR
+function extractSiteFrom(text){
+  let t = (text||'')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s*:\s*\/\s*\/\s*/g, '://')
+    .replace(/\s*\.\s*/g, '.')
+    .replace(/\s*\/\s*/g, '/');
+  const m1 = t.match(/\bhttps?:\/\/[a-z0-9.-]+(?:\/[^\s]*)?/i);
+  if (m1) return m1[0];
+  const m2 = t.match(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?/i);
+  if (m2) return 'https://' + m2[0].replace(/^https?:\/\//i,'');
+  return '';
+}
+
+async function runOCR(){
+  resetOut();
+  const file = fileInput.files?.[0];
+  if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
+  preview.src = URL.createObjectURL(file);
+
+  setStatus('OCR en cours…');
+  const { data } = await Tesseract.recognize(file, 'eng+fra');
+  const text = (data && data.text || '').replace(/\s+/g,' ').trim();
+
+  setStatus('Extraction…');
+  fillFromText(text);
+  doneOrWarn();
+}
+
+function fillFromText(text){
+  const site = extractSiteFrom(text);
+  if(site){ siteLink.textContent = site; siteLink.href = site; }
+
+  const norm = text.replace(/O/g,'0').replace(/l|I/g,'1').replace(/—|–/g,'-');
+  const macMatch = norm.match(/\b([0-9a-fA-F]{2}[:\-]){5}[0-9a-fA-F]{2}\b/);
+  const mac = macMatch ? macMatch[0].replace(/-/g,':').toLowerCase() : '';
+  macEl.textContent = mac;
+  macPlainEl.textContent = mac ? mac.replace(/:/g,'').toUpperCase() : '';
+
+  const keyMatch = norm.match(/\b(?:clé\s*(?:de|l’|l')\s*(?:appareil|device)\s*[:\-]?\s*)?(\d{5,7})\b/i);
+  dkeyEl.textContent = keyMatch ? keyMatch[1] : '';
+
+  let id = '';
+  const idLabel = norm.match(/\b(?:device\s*id|id\.)[:\s]*([0-9a-fA-F\s]{12,})/i);
+  if(idLabel){
+    const onlyHex = idLabel[1].replace(/[^0-9a-fA-F\s]/g,' ').trim();
+    const pairs = onlyHex.split(/\s+/).filter(x=>/^[0-9a-fA-F]{2}$/.test(x));
+    if(pairs.length >= 6) id = pairs.join(' ').toUpperCase();
+  } else {
+    const compact = norm.match(/\b[0-9a-fA-F]{12,}\b/);
+    if(compact) id = compact[0].toUpperCase();
+  }
+  didEl.textContent = id;
+}
+
+function doneOrWarn(){
+  if(!siteLink.textContent && !macEl.textContent && !dkeyEl.textContent && !didEl.textContent){
+    setStatus('Rien trouvé. Essayez une image plus nette.', 'warn');
+  } else {
+    setStatus('Terminé ✔', 'ok');
+  }
+}
+
+async function runOpenAIVision(){
+  resetOut();
+  const file = fileInput.files?.[0];
+  if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
+  preview.src = URL.createObjectURL(file);
+
+  setStatus('Analyse OpenAI…');
+  const b64 = await readFile(file);
+
+  try{
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageDataUrl: b64 })
+    });
+
+    if(!res.ok){
+      const err = await res.text();
+      setStatus('Erreur OpenAI/Proxy : ' + err, 'warn');
+      return;
+    }
+
+    const j = await res.json();
+
+    if(j.site){
+      const link = j.site.startsWith('http') ? j.site : ('https://' + j.site);
+      siteLink.textContent = link;
+      siteLink.href = link;
+    }
+    const mac = (j.mac || '').toLowerCase();
+    macEl.textContent = mac;
+    macPlainEl.textContent = mac ? mac.replace(/:/g,'').toUpperCase() : '';
+    dkeyEl.textContent = j.device_key || '';
+    didEl.textContent  = j.device_id || '';
+
+    if(!siteLink.textContent){
+      const guess = extractSiteFrom(JSON.stringify(j));
+      if(guess){ siteLink.textContent = guess; siteLink.href = guess; }
+    }
+
+    doneOrWarn();
+  }catch(e){
+    setStatus('Erreur réseau : ' + e.message, 'warn');
+  }
+}
+
+/* UI wiring for extractor */
+drop.addEventListener('click', ()=> fileInput.click());
+drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
+drop.addEventListener('drop', async e=>{
+  e.preventDefault(); drop.classList.remove('drag');
+  if(e.dataTransfer.files?.length){ fileInput.files = e.dataTransfer.files; preview.src = await readFile(e.dataTransfer.files[0]); }
+});
+fileInput.addEventListener('change', async ()=>{ if(fileInput.files?.[0]) preview.src = await readFile(fileInput.files[0]); });
+document.querySelector('#run').addEventListener('click', runOCR);
+document.querySelector('#runAi').addEventListener('click', runOpenAIVision);
+document.querySelector('#clear').addEventListener('click', ()=>{
+  fileInput.value=''; preview.removeAttribute('src'); resetOut(); setStatus('Prêt.');
+});
+
+/* -----------------------------------------------------------
+   M3U GENERATOR
+----------------------------------------------------------- */
 (function(){
   function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   onReady(function(){
-    const $ = (id) => document.getElementById(id);
-    const status = $('status');
-    const nameInput = $('playlistName');
-    const durationSel = $('duration');
-    const urlInput = $('m3u');
-    const out = $('output');
+    const $id = (id) => document.getElementById(id);
+    const status = $id('m3uStatus');
+    const nameInput = $id('playlistName');
+    const durationSel = $id('duration');
+    const urlInput = $id('m3uInput');
+    const out = $id('output');
 
-    // extras fields
-    const f_m3u = $('x_m3u');
-    const f_user = $('x_user');
-    const f_pass = $('x_pass');
-    const f_url  = $('x_url');
-    const f_combo = $('x_combo');
+    const f_m3u = $id('x_m3u');
+    const f_user = $id('x_user');
+    const f_pass = $id('x_pass');
+    const f_url  = $id('x_url');
+    const f_combo = $id('x_combo');
 
     function extract(u){
       const res = {username:'', password:'', origin:'', raw:''};
       try{
         const url = new URL(u);
-        // Conserver exactement le protocole avec :// + l'hôte et le port tels qu'écrits
         const m = /^([a-z]+:)(\/\/)?([^/]+)/i.exec(u);
         const protoRaw = (m && m[1]) ? m[1].toLowerCase() : (url.protocol || 'http:');
-        const proto = protoRaw.endsWith(':') ? protoRaw + '//' : protoRaw; // ajoute :// si besoin
+        const proto = protoRaw.endsWith(':') ? protoRaw + '//' : protoRaw;
         const hostPort = m ? m[3] : (url.host || '');
         res.origin = proto + hostPort;
         res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
         res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
         res.raw = u;
-      }catch(e){/* ignore */}
+      }catch(e){}
       return res;
     }
 
     function build(){
       const link = (urlInput.value||'').trim();
-      if(!link){ 
-        status.textContent = "Aucun lien M3U fourni."; 
-        out.value=''; 
-        fillExtras(null); 
-        return; 
+      if(!link){
+        status.textContent = "Aucun lien M3U fourni.";
+        out.value=''; fillExtras(null); return;
       }
       const {username, password, origin, raw} = extract(link);
       const name = (nameInput.value||'Digistore').trim();
@@ -212,21 +471,18 @@
       });
     }
 
-    function clearAll(){ 
-      urlInput.value=''; 
-      out.value=''; 
-      fillExtras(null);
-      status.textContent="En attente d'un lien…"; 
+    function clearAll(){
+      urlInput.value=''; out.value=''; fillExtras(null);
+      status.textContent="En attente d'un lien…";
     }
 
-    $('generateBtn').addEventListener('click', build);
-    $('copyBtn').addEventListener('click', ()=> copyPlain(out.value||'', () => {
+    $id('generateBtn').addEventListener('click', build);
+    $id('copyBtn').addEventListener('click', ()=> copyPlain(out.value||'', () => {
       const old = status.textContent; status.textContent = 'Copié !';
       setTimeout(()=> status.textContent = old || '', 900);
     }));
-    $('clearBtn').addEventListener('click', clearAll);
+    $id('clearBtn').addEventListener('click', clearAll);
 
-    // Delegate copy buttons in extras
     document.addEventListener('click', (e)=>{
       const btn = e.target.closest('button[data-copy]');
       if(!btn) return;
@@ -241,6 +497,7 @@
 </script>
 </body>
 </html>
+
 
 
 
