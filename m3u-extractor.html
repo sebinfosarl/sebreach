@@ -75,124 +75,105 @@
   </div>
 
 <script>
+// Version robuste (défensive) — ne dépend pas du Clipboard API
 (function(){
-  const $ = (id) => document.getElementById(id);
-  const m3u = $('m3u');
-  const output = $('output');
-  const playlistName = $('playlistName');
-  const status = $('status');
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(function(){
+    const $ = (id) => document.getElementById(id);
+    const m3u = $('m3u');
+    const output = $('output');
+    const playlistName = $('playlistName');
+    const status = $('status');
+    const parseBtn = $('parseBtn');
+    const clearBtn = $('clearBtn');
+    const copyBtn = $('copyBtn');
 
-  function extractParams(u){
-    const res = { username:'', password:'', type:'', output:'', origin:'', raw:'' };
-    try {
-      const url = new URL(u);
-      res.origin = url.origin;
-      res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
-      res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
-      res.type = url.searchParams.get('type') || '';
-      res.output = url.searchParams.get('output') || '';
-      res.raw = u;
-    } catch (e) {}
-    return res;
-  }
-
-  function buildTemplate(data){
-    const { username, password, origin, raw } = data;
-    const name = (playlistName.value || 'Digistore').trim();
-
-    if(!origin || !username || !password){
-      return 'Veuillez fournir un lien M3U valide avec les paramètres "username" et "password".
-
-Exemple :
-http://votre-serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts';
+    function extractParams(u){
+      const res = { username:'', password:'', type:'', output:'', origin:'', raw:'' };
+      try {
+        const url = new URL(u);
+        res.origin = url.origin;
+        res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
+        res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
+        res.type = url.searchParams.get('type') || '';
+        res.output = url.searchParams.get('output') || '';
+        res.raw = u;
+      } catch (e) {}
+      return res;
     }
 
-    const nameLine = name ? `Nom de la playlist : ${name}
-` : '';
-
-    return `⚠️ TEST 12 HEURES ⚠️
-
-`+
-`➡️ Code :
-`+
-`${nameLine}`+
-`Nom d’utilisateur : ${username}
-`+
-`Mot de passe : ${password}
-`+
-`URL du serveur : ${origin} 
-
-`+
-`➡️ Lien M3U :
-`+
-`${raw}`;
-  }
-
-  function generate(){
-    const val = m3u.value.trim();
-    if(!val){
-      status.textContent = 'Aucun lien M3U fourni.';
-      output.value = '';
-      return;
+    function buildTemplate(data){
+      const { username, password, origin, raw } = data;
+      const name = (playlistName?.value || 'Digistore').trim();
+      if(!origin || !username || !password){
+        return 'Veuillez fournir un lien M3U valide avec les paramètres "username" et "password".\n\nExemple :\nhttp://votre-serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts';
+      }
+      const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
+      return `⚠️ TEST 12 HEURES ⚠️\n\n`+
+             `➡️ Code :\n`+
+             `${nameLine}`+
+             `Nom d’utilisateur : ${username}\n`+
+             `Mot de passe : ${password}\n`+
+             `URL du serveur : ${origin} \n\n`+
+             `➡️ Lien M3U :\n`+
+             `${raw}`;
     }
-    const data = extractParams(val);
-    const tpl = buildTemplate(data);
-    output.value = tpl;
-    if (tpl.startsWith('Veuillez fournir')) { status.innerHTML = '<span class="warn">Lien invalide</span>'; }
-    else { status.innerHTML = '<span class="ok">Template prêt ✔</span>'; }
-  }
 
-  function flashCopied(){
-    const old = output.style.boxShadow;
-    output.style.boxShadow = '0 0 0 2px rgba(79,140,255,.6)';
-    setTimeout(()=>{ output.style.boxShadow = old; }, 300);
-    const btn = document.getElementById('copyBtn');
-    const oldTxt = btn.textContent;
-    btn.textContent = 'Copié !';
-    setTimeout(()=> btn.textContent = oldTxt, 1200);
-  }
+    function generate(){
+      try{
+        const val = (m3u?.value || '').trim();
+        if(!val){ status.textContent = 'Aucun lien M3U fourni.'; output.value = ''; return; }
+        const data = extractParams(val);
+        const tpl = buildTemplate(data);
+        output.value = tpl;
+        if (tpl.startsWith('Veuillez fournir')) { status.innerHTML = '<span class="warn">Lien invalide</span>'; }
+        else { status.innerHTML = '<span class="ok">Template prêt ✔</span>'; }
+      }catch(err){ console.error(err); status.textContent='Erreur de génération'; }
+    }
 
-  function fallbackCopy(){
-    try {
+    function flashCopied(){
+      const old = output.style.boxShadow;
+      output.style.boxShadow = '0 0 0 2px rgba(79,140,255,.6)';
+      setTimeout(()=>{ output.style.boxShadow = old; }, 300);
+      const oldTxt = copyBtn.textContent; copyBtn.textContent = 'Copié !';
+      setTimeout(()=> copyBtn.textContent = oldTxt, 1200);
+    }
+
+    function fallbackCopy(){
+      if(!output.value) return;
       const ta = document.createElement('textarea');
       ta.value = output.value;
       ta.setAttribute('readonly','');
       ta.style.position = 'fixed';
       ta.style.opacity = '0';
       document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand('copy');
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); flashCopied(); }
+      catch(e){
+        // dernière chance: sélectionne dans la zone en lecture seule
+        output.removeAttribute('readonly'); output.focus(); output.select();
+        document.execCommand('copy'); output.setAttribute('readonly','');
+        alert('Texte sélectionné. Faites Ctrl+C / Cmd+C.');
+      }
       document.body.removeChild(ta);
-      if(ok){ flashCopied(); } else { throw new Error('execCommand failed'); }
-    } catch(e){
-      output.removeAttribute('readonly');
-      output.select();
-      output.setSelectionRange(0, output.value.length);
-      output.setAttribute('readonly','');
-      alert('Copie automatique impossible. Le texte a été sélectionné, faites Ctrl+C / Cmd+C.');
     }
-  }
 
-  function copyOut(){
-    if(!output.value){ return; }
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(output.value).then(()=>{
-        flashCopied();
-      }).catch(fallbackCopy);
-    } else {
-      fallbackCopy();
+    function copyOut(){
+      try{
+        if (navigator.clipboard && window.isSecureContext){
+          navigator.clipboard.writeText(output.value).then(flashCopied).catch(fallbackCopy);
+        } else { fallbackCopy(); }
+      }catch(e){ fallbackCopy(); }
     }
-  }
 
-  // Events
-  $('parseBtn').addEventListener('click', generate);
-  $('clearBtn').addEventListener('click', ()=>{ m3u.value=''; output.value=''; status.textContent='En attente d\'un lien…'; });
-  $('copyBtn').addEventListener('click', copyOut);
-
-  // Génération automatique si on colle et appuie Entrée
-  m3u.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); generate(); } });
-  m3u.addEventListener('paste', ()=>{ setTimeout(generate, 0); });
+    parseBtn?.addEventListener('click', generate);
+    clearBtn?.addEventListener('click', ()=>{ m3u.value=''; output.value=''; status.textContent='En attente d\'un lien…'; });
+    copyBtn?.addEventListener('click', copyOut);
+    m3u?.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); generate(); } });
+    m3u?.addEventListener('paste', ()=>{ setTimeout(generate, 0); });
+  });
 })();
 </script>
 </body>
 </html>
+
