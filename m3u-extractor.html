@@ -10,36 +10,26 @@
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Helvetica,Arial;background:var(--bg);color:var(--text)}
     a{color:inherit}
-
     .container{max-width:1000px;margin:24px auto;padding:16px}
     .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-    .tabbtn{
-      cursor:pointer;background:#2a3144;border:1px solid rgba(255,255,255,.06);
-      color:#fff;padding:10px 14px;border-radius:12px;font-weight:600
-    }
+    .tabbtn{cursor:pointer;background:#2a3144;border:1px solid rgba(255,255,255,.06);color:#fff;padding:10px 14px;border-radius:12px;font-weight:600}
     .tabbtn.active{background:var(--accent)}
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.35)}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
     h1{margin:0 0 6px}
     p.lead{margin:0 0 14px;color:var(--muted)}
     .muted{color:var(--muted);font-size:13px}
     .ok{color:var(--ok)} .warn{color:var(--warn)}
-
     button{cursor:pointer;border:0;border-radius:10px;padding:12px 16px;font-weight:600;color:white;background:var(--accent)}
     button.secondary{background:#2a3144}
     .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 
     /* Extracteur */
     .drop{
-      position:relative;
-      border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;
+      position:relative;border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;
       text-align:center;cursor:pointer; user-select:none;
     }
     .drop.drag{border-color:var(--accent);background:#0e1320}
-    /* Input fichier en overlay pour mobile/desktop */
-    .drop input[type="file"]{
-      position:absolute; inset:0; width:100%; height:100%;
-      opacity:0; cursor:pointer;
-    }
+    .drop input[type="file"]{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;}
     .pick-row{display:flex;align-items:center;gap:10px;margin:8px 0 0 0;justify-content:center}
     .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
     .switch input{width:20px;height:20px}
@@ -49,10 +39,7 @@
     .row{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 0}
     .result .row + .row{border-top:1px solid rgba(255,255,255,.10);margin-top:10px;padding-top:14px}
     .row .label{color:var(--muted)}
-    .row .value{
-      font-family:ui-monospace,Menlo,Consolas,monospace;background:#101421;border-radius:8px;
-      padding:10px 12px;min-height:42px;display:flex;align-items:center;word-break:break-all
-    }
+    .row .value{font-family:ui-monospace,Menlo,Consolas,monospace;background:#101421;border-radius:8px;padding:10px 12px;min-height:42px;display:flex;align-items:center;word-break:break-all}
     .row a.value{color:var(--accent);text-decoration:none}
     .copybtn{background:#2a3144;padding:10px 12px;border-radius:8px;font-size:13px}
     .status{margin-top:10px;color:var(--muted)}
@@ -76,26 +63,24 @@
 </head>
 <body>
 <div class="container">
-  <!-- Onglets -->
   <div class="tabs">
     <button class="tabbtn active" data-tab="extractor">Extraction depuis image</button>
     <button class="tabbtn" data-tab="m3u">Générateur M3U</button>
   </div>
 
-  <!-- ===== Extracteur (OpenAI via Worker) ===== -->
+  <!-- Extracteur -->
   <section id="extractor" class="card">
     <h1>Extraction depuis capture d’écran IPTV</h1>
     <p class="lead">Téléversez l’image → obtenez <b>Site</b>, <b>MAC</b>, <b>Device Key</b>, <b>Device ID</b> via <b>OpenAI (proxy)</b>.</p>
 
     <label class="muted">Image</label>
     <div id="drop" class="drop" aria-label="Sélecteur d'image">
-      <div> Touchez / cliquez pour choisir (galerie/fichiers) ou faites glisser une image ici </div>
+      <div>Touchez / cliquez pour choisir (galerie/fichiers) ou faites glisser une image ici</div>
       <input id="file" type="file" accept="image/*" aria-label="Choisir une image">
     </div>
     <div class="pick-row">
       <label class="switch" title="Activer pour prendre une photo directement">
-        <input id="toggleCamera" type="checkbox">
-        Utiliser la caméra
+        <input id="toggleCamera" type="checkbox"> Utiliser la caméra
       </label>
     </div>
 
@@ -107,37 +92,17 @@
     </div>
     <div id="status" class="status">Prêt.</div>
 
-    <div class="result" id="results">
-      <div class="row">
-        <div class="label">Site</div>
-        <a id="siteLink" class="value" href="#" target="_blank" rel="noopener noreferrer"></a>
-        <span></span>
-      </div>
-      <div class="row">
-        <div class="label">Adresse MAC</div>
-        <div id="mac" class="value"></div>
-        <button class="copybtn" type="button" data-copy="#mac">Copier</button>
-      </div>
-      <div class="row">
-        <div class="label">MAC (sans « : »)</div>
-        <div id="macplain" class="value"></div>
-        <button class="copybtn" type="button" data-copy="#macplain">Copier</button>
-      </div>
-      <div class="row">
-        <div class="label">Clé appareil</div>
-        <div id="dkey" class="value"></div>
-        <button class="copybtn" type="button" data-copy="#dkey">Copier</button>
-      </div>
-      <div class="row">
-        <div class="label">Device ID</div>
-        <div id="did" class="value"></div>
-        <button class="copybtn" type="button" data-copy="#did">Copier</button>
-      </div>
+    <div class="result">
+      <div class="row"><div class="label">Site</div><a id="siteLink" class="value" href="#" target="_blank" rel="noopener noreferrer"></a><span></span></div>
+      <div class="row"><div class="label">Adresse MAC</div><div id="mac" class="value"></div><button class="copybtn" type="button" data-copy="#mac">Copier</button></div>
+      <div class="row"><div class="label">MAC (sans « : »)</div><div id="macplain" class="value"></div><button class="copybtn" type="button" data-copy="#macplain">Copier</button></div>
+      <div class="row"><div class="label">Clé appareil</div><div id="dkey" class="value"></div><button class="copybtn" type="button" data-copy="#dkey">Copier</button></div>
+      <div class="row"><div class="label">Device ID</div><div id="did" class="value"></div><button class="copybtn" type="button" data-copy="#did">Copier</button></div>
     </div>
     <p class="note">Par défaut, vous choisissez dans la galerie/fichiers. Activez “Utiliser la caméra” pour ouvrir directement l’appareil photo.</p>
   </section>
 
-  <!-- ===== Générateur M3U ===== -->
+  <!-- M3U -->
   <section id="m3u" class="card" style="display:none">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
       <h1>Générateur de Template M3U</h1>
@@ -149,10 +114,7 @@
     <input type="text" id="playlistName" placeholder="Ex. Digistore" value="Digistore" />
 
     <label for="duration">Durée de test</label>
-    <select id="duration">
-      <option>1H</option><option>2H</option><option>3H</option>
-      <option>6H</option><option selected>12H</option><option>24H</option>
-    </select>
+    <select id="duration"><option>1H</option><option>2H</option><option>3H</option><option>6H</option><option selected>12H</option><option>24H</option></select>
 
     <label for="m3uInput">Lien M3U</label>
     <input type="url" id="m3uInput" placeholder="Collez ici le lien M3U complet (http/https)…" inputmode="url" autocomplete="off" spellcheck="false"/>
@@ -168,26 +130,11 @@
 
     <div class="extras">
       <div class="title">Copie rapide (valeurs seules)</div>
-      <div class="row2">
-        <input id="x_m3u" type="text" readonly placeholder="Lien M3U (brut)" />
-        <button data-copy="#x_m3u" type="button">Copier M3U</button>
-      </div>
-      <div class="row2">
-        <input id="x_user" type="text" readonly placeholder="Username" />
-        <button data-copy="#x_user" type="button">Copier Username</button>
-      </div>
-      <div class="row2">
-        <input id="x_pass" type="text" readonly placeholder="Password" />
-        <button data-copy="#x_pass" type="button">Copier Password</button>
-      </div>
-      <div class="row2">
-        <input id="x_url" type="text" readonly placeholder="URL (avec port s'il existe)" />
-        <button data-copy="#x_url" type="button">Copier URL</button>
-      </div>
-      <div class="row2">
-        <input id="x_combo" type="text" readonly placeholder="Username : X / Password : Y / URL : http://..." />
-        <button data-copy="#x_combo" type="button">Copier la ligne</button>
-      </div>
+      <div class="row2"><input id="x_m3u" type="text" readonly placeholder="Lien M3U (brut)" /><button data-copy="#x_m3u" type="button">Copier M3U</button></div>
+      <div class="row2"><input id="x_user" type="text" readonly placeholder="Username" /><button data-copy="#x_user" type="button">Copier Username</button></div>
+      <div class="row2"><input id="x_pass" type="text" readonly placeholder="Password" /><button data-copy="#x_pass" type="button">Copier Password</button></div>
+      <div class="row2"><input id="x_url" type="text" readonly placeholder="URL (avec port s'il existe)" /><button data-copy="#x_url" type="button">Copier URL</button></div>
+      <div class="row2"><input id="x_combo" type="text" readonly placeholder="Username : X / Password : Y / URL : http://..." /><button data-copy="#x_combo" type="button">Copier la ligne</button></div>
     </div>
 
     <div class="footer">⚠️ Cette page formate uniquement vos informations. Elle ne vérifie pas la validité d’un abonnement.</div>
@@ -195,48 +142,34 @@
 </div>
 
 <script>
-/* ---------- Onglets ---------- */
-const tabs = document.querySelectorAll('.tabbtn');
-tabs.forEach(btn=>{
+/* Onglets */
+document.querySelectorAll('.tabbtn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    tabs.forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     const tab = btn.getAttribute('data-tab');
-    document.querySelectorAll('section.card').forEach(s=>{
-      s.style.display = (s.id === tab) ? '' : 'none';
-    });
+    document.querySelectorAll('section.card').forEach(s=> s.style.display = (s.id === tab) ? '' : 'none');
   });
 });
 
-/* ---------- Extracteur (OpenAI via Worker) ---------- */
-const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← ton URL, sans slash final
+/* Extracteur */
+const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← ta vraie URL, sans slash final
 
 const $ = (s)=> document.querySelector(s);
 const statusEl = $('#status');
 const setStatus = (t, cls='') => { statusEl.className='status '+(cls||''); statusEl.textContent=t; };
 
-const siteLink   = $('#siteLink');
-const macEl      = $('#mac');
-const macPlainEl = $('#macplain');
-const dkeyEl     = $('#dkey');
-const didEl      = $('#did');
-const fileInput  = $('#file');
-const drop       = $('#drop');
-const preview    = $('#preview');
-const runAiBtn   = $('#runAi');
-const clearBtn   = $('#clear');
-const toggleCamera = $('#toggleCamera');
+const siteLink = $('#siteLink'), macEl = $('#mac'), macPlainEl = $('#macplain'), dkeyEl = $('#dkey'), didEl = $('#did');
+const fileInput = $('#file'), drop = $('#drop'), preview = $('#preview');
+const runAiBtn = $('#runAi'), clearBtn = $('#clear'), toggleCamera = $('#toggleCamera');
 
 let currentFile = null;
 let isBusy = false;
 
 /* Caméra ON/OFF (galerie par défaut) */
 toggleCamera.addEventListener('change', ()=>{
-  if(toggleCamera.checked){
-    fileInput.setAttribute('capture','environment'); // appareil photo
-  }else{
-    fileInput.removeAttribute('capture'); // Galerie / Fichiers
-  }
+  if(toggleCamera.checked){ fileInput.setAttribute('capture','environment'); }
+  else { fileInput.removeAttribute('capture'); }
 });
 
 /* Copier */
@@ -248,18 +181,13 @@ function copyFrom(sel){
 }
 document.addEventListener('click', e=>{
   const b = e.target.closest('[data-copy]'); if(!b) return;
-  e.preventDefault();
-  copyFrom(b.getAttribute('data-copy'));
+  e.preventDefault(); copyFrom(b.getAttribute('data-copy'));
 });
 
 /* Reset résultats */
 function resetOut(){
-  siteLink.textContent = '';
-  siteLink.removeAttribute('href');
-  macEl.textContent = '';
-  macPlainEl.textContent = '';
-  dkeyEl.textContent = '';
-  didEl.textContent = '';
+  siteLink.textContent=''; siteLink.removeAttribute('href');
+  macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
 }
 
 /* File -> DataURL */
@@ -272,14 +200,14 @@ function readFileAsDataURL(file){
   });
 }
 
-/* Compression image (max 1200px, JPEG 0.72) — réduit les erreurs réseau sur mobile */
+/* Compression (1200px, JPEG 0.72) */
 async function compressImageToDataURL(file, maxSize=1200, quality=0.72){
   const dataUrl = await readFileAsDataURL(file);
 
   const img = new Image();
   img.decoding = 'async';
   img.src = dataUrl;
-  await img.decode();
+  try { await img.decode(); } catch { await new Promise(r=>{ img.onload=r; img.onerror=r; }); }
 
   const width = img.naturalWidth || img.width;
   const height = img.naturalHeight || img.height;
@@ -289,18 +217,15 @@ async function compressImageToDataURL(file, maxSize=1200, quality=0.72){
   }
 
   const scale = Math.min(1, maxSize / Math.max(width, height));
-  const w = Math.round(width * scale);
-  const h = Math.round(height * scale);
+  const w = Math.round(width * scale), h = Math.round(height * scale);
 
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: false });
   ctx.drawImage(img, 0, 0, w, h);
 
   let out = canvas.toDataURL('image/jpeg', quality);
-  if (out.length > 3.8 * 1024 * 1024) {
-    out = canvas.toDataURL('image/jpeg', 0.6);
-  }
+  if (out.length > 3.8 * 1024 * 1024) { out = canvas.toDataURL('image/jpeg', 0.6); }
   return out;
 }
 
@@ -313,65 +238,54 @@ function normalizeUrlMaybe(u){
   return s;
 }
 
-/* Ping Worker (CORS check) */
+/* Ping Worker */
 async function pingWorker(){
-  try {
-    const res = await fetch(WORKER_URL + '/ping', { method:'GET' });
-    return res.ok;
-  } catch { return false; }
+  try { const res = await fetch(WORKER_URL + '/ping', { method:'GET', cache:'no-store' }); return res.ok; }
+  catch { return false; }
 }
 
-/* Lancer l'analyse */
+/* Analyse */
 async function runOpenAIVision(e){
   e?.preventDefault();
-  if(isBusy) return;
+  if (isBusy) return;
 
   const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
 
-  if(!preview.src) preview.src = URL.createObjectURL(file);
-
   resetOut();
   setStatus('Analyse OpenAI…');
-  isBusy = true;
-  runAiBtn.disabled = true;
+  isBusy = true; runAiBtn.disabled = true;
 
   try{
-    // 1) test CORS
     const ok = await pingWorker();
-    if (!ok) {
-      setStatus('CORS bloqué : vérifie le Worker URL et les en-têtes CORS.', 'warn');
-      return;
-    }
+    if (!ok) { setStatus('CORS bloqué : vérifie le Worker URL et les en-têtes CORS.', 'warn'); return; }
 
-    // 2) compresser
     const dataUrl = await compressImageToDataURL(file, 1200, 0.72);
 
-    // garde-fou côté client (~7.5 Mo)
+    // garde-fou client
     if (dataUrl.length > 7.5 * 1024 * 1024) {
       setStatus('Image trop lourde après compression. Recadre ou fais une capture plus petite.', 'warn');
       return;
     }
 
-    // 3) POST vers Worker
+    // Afficher aperçu (DataURL) — plus stable sur mobile
+    preview.src = dataUrl;
+
     const res = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageDataUrl: dataUrl })
+      headers: { 'Content-Type': 'application/json', 'Accept':'application/json' },
+      body: JSON.stringify({ imageDataUrl: dataUrl }),
+      cache: 'no-store',
+      redirect: 'follow'
     });
 
     if(!res.ok){
       const txt = await res.text().catch(()=> '');
       let msg = 'Erreur OpenAI/Proxy';
-      try {
-        const j = JSON.parse(txt);
-        if (j?.error) msg = `${msg} : ${j.error} (status ${j.status || res.status})`;
-      } catch {
-        msg = `${msg} (HTTP ${res.status})`;
-      }
+      try { const j = JSON.parse(txt); if (j?.error) msg = `${msg} : ${j.error} (status ${j.status || res.status})`; }
+      catch { msg = `${msg} (HTTP ${res.status})`; }
       if (res.status === 413) msg = 'Image trop lourde. Réessaie après recadrage / réduction.';
-      setStatus(msg, 'warn');
-      return;
+      setStatus(msg, 'warn'); return;
     }
 
     const j = await res.json();
@@ -386,13 +300,8 @@ async function runOpenAIVision(e){
     didEl.textContent  = j.device_id || '';
 
     if(!siteLink.textContent && j){
-      const guess = String(JSON.stringify(j))
-        .replace(/[\u2013\u2014]/g,'-')
-        .match(/\b(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s"]*)?/i);
-      if(guess){
-        const g = normalizeUrlMaybe(guess[0]);
-        siteLink.textContent = g; siteLink.href = g;
-      }
+      const guess = String(JSON.stringify(j)).replace(/[\u2013\u2014]/g,'-').match(/\b(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s"]*)?/i);
+      if(guess){ const g = normalizeUrlMaybe(guess[0]); siteLink.textContent = g; siteLink.href = g; }
     }
 
     setStatus('Terminé ✔', 'ok');
@@ -400,12 +309,11 @@ async function runOpenAIVision(e){
     const msg = (err && (err.message || err.name)) ? `${err.name}: ${err.message}` : 'Échec réseau (vérifie CORS/HTTPS)';
     setStatus('Erreur réseau : ' + msg, 'warn');
   }finally{
-    isBusy = false;
-    runAiBtn.disabled = false;
+    isBusy = false; runAiBtn.disabled = false;
   }
 }
 
-/* Sélection fichier (mobile/desktop) */
+/* Sélection fichier — toujours DataURL */
 fileInput.addEventListener('change', async ()=>{
   if(fileInput.files?.length){
     currentFile = fileInput.files[0];
@@ -415,15 +323,18 @@ fileInput.addEventListener('change', async ()=>{
   }
 });
 
-/* Drag & drop (desktop) */
+/* Drag & drop — convertit en DataURL aussi (pas d’ObjectURL) */
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
 drop.addEventListener('drop', async e=>{
   e.preventDefault(); drop.classList.remove('drag');
   if(e.dataTransfer.files?.length){
     currentFile = e.dataTransfer.files[0];
-    preview.src = URL.createObjectURL(currentFile);
+    const durl = await readFileAsDataURL(currentFile);
+    preview.src = durl;
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
+    // IMPORTANT: netoyer l'input pour permettre de re-choisir le même fichier ensuite
+    fileInput.value = '';
   }
 });
 
@@ -431,26 +342,18 @@ drop.addEventListener('drop', async e=>{
 runAiBtn.addEventListener('click', runOpenAIVision);
 clearBtn.addEventListener('click', (e)=>{
   e.preventDefault();
+  // reset fort pour éviter le bug au 2e essai sur mobile
   fileInput.value=''; currentFile=null;
   preview.removeAttribute('src');
   resetOut();
   setStatus('Prêt.');
 });
 
-/* ---------- Générateur M3U ---------- */
+/* Générateur M3U */
 (function(){
   const $id = (id) => document.getElementById(id);
-  const status = $id('m3uStatus');
-  const nameInput = $id('playlistName');
-  const durationSel = $id('duration');
-  const urlInput = $id('m3uInput');
-  const out = $id('output');
-
-  const f_m3u = $id('x_m3u');
-  const f_user = $id('x_user');
-  const f_pass = $id('x_pass');
-  const f_url  = $id('x_url');
-  const f_combo = $id('x_combo');
+  const status = $id('m3uStatus'), nameInput = $id('playlistName'), durationSel = $id('duration'), urlInput = $id('m3uInput'), out = $id('output');
+  const f_m3u = $id('x_m3u'), f_user = $id('x_user'), f_pass = $id('x_pass'), f_url = $id('x_url'), f_combo = $id('x_combo');
 
   function extract(u){
     const res = {username:'', password:'', origin:'', raw:''};
@@ -470,9 +373,7 @@ clearBtn.addEventListener('click', (e)=>{
 
   function build(){
     const link = (urlInput.value||'').trim();
-    if(!link){
-      status.textContent = "Aucun lien M3U fourni."; out.value=''; fillExtras(null); return;
-    }
+    if(!link){ status.textContent = "Aucun lien M3U fourni."; out.value=''; fillExtras(null); return; }
     const {username, password, origin, raw} = extract(link);
     const name = (nameInput.value||'Digistore').trim();
     const duration = (durationSel?.value || '12H');
@@ -505,9 +406,8 @@ clearBtn.addEventListener('click', (e)=>{
   function copyPlain(text, onDone){
     if(!text) return;
     const done = () => { if(onDone) onDone(); };
-    if(navigator.clipboard && window.isSecureContext){
-      navigator.clipboard.writeText(text).then(done).catch(fallback);
-    } else { fallback(); }
+    if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(text).then(done).catch(fallback); }
+    else { fallback(); }
     function fallback(){
       const ta = document.createElement('textarea');
       ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
@@ -518,12 +418,8 @@ clearBtn.addEventListener('click', (e)=>{
   }
 
   function copyFromSelector(sel){
-    const el = document.querySelector(sel);
-    if(!el) return;
-    copyPlain(el.value||'', () => {
-      const old = status.textContent; status.textContent = 'Copié !';
-      setTimeout(()=> status.textContent = old || '', 900);
-    });
+    const el = document.querySelector(sel); if(!el) return;
+    copyPlain(el.value||'', () => { const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900); });
   }
 
   function clearAll(){ urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; }
@@ -533,12 +429,7 @@ clearBtn.addEventListener('click', (e)=>{
     const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
   }));
   document.getElementById('clearBtn').addEventListener('click', clearAll);
-
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('button[data-copy]'); if(!btn) return;
-    const sel = btn.getAttribute('data-copy'); copyFromSelector(sel);
-  });
-
+  document.addEventListener('click', (e)=>{ const btn = e.target.closest('button[data-copy]'); if(!btn) return; const sel = btn.getAttribute('data-copy'); copyFromSelector(sel); });
   urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
   urlInput.addEventListener('paste', ()=>{ setTimeout(build, 0); });
 })();
