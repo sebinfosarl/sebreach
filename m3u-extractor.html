@@ -1,281 +1,189 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Générateur de Template M3U</title>
-  <meta name="description" content="Collez un lien M3U et obtenez un template prêt à copier avec un bouton Copier." />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Custom styles for dark theme */
-    :root { 
-        --bg:#0f1115; 
-        --card:#161a23; 
-        --text:#e9eef5; 
-        --muted:#9aa3b2; 
-        --accent:#4f8cff; 
-        --ok:#22c55e; 
-        --warn:#f59e0b; 
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Générateur de Template M3U</title>
+  <meta name="description" content="Collez un lien M3U et obtenez un template prêt à copier avec un bouton Copier." />
+  <style>
+    :root { --bg:#0f1115; --card:#161a23; --text:#e9eef5; --muted:#9aa3b2; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); }
+    .container { max-width: 900px; margin: 40px auto; padding: 24px; }
+    .card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); padding: 20px; }
+    h1 { margin: 0 0 10px; font-size: 28px; }
+    p.lead { margin: 0 0 20px; color: var(--muted); }
+    label { display:block; font-weight:600; margin: 16px 0 8px; }
+    .row { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 720px) { .row { grid-template-columns: 1fr 1fr; } }
+    input[type="text"], textarea, input[type="url"] {
+      width: 100%; background: #0e1118; color: var(--text); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 12px 14px; font-size: 15px; outline: none; transition: border-color .2s;
     }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); }
-    .container { max-width: 900px; margin: 40px auto; padding: 24px; }
-    .card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); padding: 20px; }
-    h1 { margin: 0 0 10px; font-size: 28px; }
-    p.lead { margin: 0 0 20px; color: var(--muted); }
-    label { display:block; font-weight:600; margin: 16px 0 8px; }
-    .row { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 720px) { .row { grid-template-columns: 1fr 1fr; } }
-    input[type="text"], textarea, input[type="url"] {
-      width: 100%; background: #0e1118; color: var(--text); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px; padding: 12px 14px; font-size: 15px; outline: none; transition: border-color .2s;
-    }
-    textarea { min-height: 200px; resize: vertical; }
-    input[readonly], textarea[readonly] { opacity: .95; }
-    input:focus, textarea:focus { border-color: var(--accent); }
-    .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top: 14px; }
-    button { cursor:pointer; border: 0; border-radius: 12px; padding: 10px 14px; font-weight:600; color: white; background: var(--accent);
-             transition: transform .02s ease-in-out, filter .15s, box-shadow .2s; }
-    button:hover { filter: brightness(1.1); }
-    button:active { transform: translateY(1px); }
-    button.secondary { background: #303649; }
-    .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
-    .badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0e1118; border:1px solid rgba(255,255,255,0.08); color:var(--muted); font-size:12px; }
-    .status { margin-left:auto; font-size: 13px; color: var(--muted); }
-    .ok { color: var(--ok); }
-    .warn { color: var(--warn); }
-    .footer { margin-top: 22px; font-size: 12px; color: var(--muted); text-align:center; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-  </style>
+    textarea { min-height: 200px; resize: vertical; }
+    input[readonly], textarea[readonly] { opacity: .95; }
+    input:focus, textarea:focus { border-color: var(--accent); }
+    .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top: 14px; }
+    button { cursor:pointer; border: 0; border-radius: 12px; padding: 10px 14px; font-weight:600; color: white; background: var(--accent);
+             transition: transform .02s ease-in-out, filter .15s; }
+    button:active { transform: translateY(1px); }
+    button.secondary { background: #303649; }
+    .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .badge { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#0e1118; border:1px solid rgba(255,255,255,0.08); color:var(--muted); font-size:12px; }
+    .status { margin-left:auto; font-size: 13px; color: var(--muted); }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .footer { margin-top: 22px; font-size: 12px; color: var(--muted); text-align:center; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom: 8px;">
-        <h1>Générateur de Template M3U</h1>
-        <span class="badge mono">copier en 1 clic</span>
-        <span id="status" class="status">En attente d'un lien…</span>
-      </div>
-      <p class="lead">Collez votre <strong>lien M3U</strong> (ex. <span class="mono">http://serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts</span>).<br />Le template s’affiche automatiquement ci‑dessous, prêt à être copié.</p>
+  <div class="container">
+    <div class="card">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom: 8px;">
+        <h1>Générateur de Template M3U</h1>
+        <span class="badge mono">copier en 1 clic</span>
+        <span id="status" class="status">En attente d'un lien…</span>
+      </div>
+      <p class="lead">Collez votre <strong>lien M3U</strong> (ex. <span class="mono">http://serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts</span>).<br />Le template s’affiche automatiquement ci‑dessous, prêt à être copié.</p>
 
-      <div class="row">
-        <div>
-          <label for="playlistName">Nom de la playlist (optionnel)</label>
-          <input type="text" id="playlistName" placeholder="Ex. Digistore" value="Digistore" />
-          <div class="hint">Ligne affichée dans le template. Par défaut : <span class="mono">Digistore</span>.</div>
-        </div>
-        <div></div>
-      </div>
+      <div class="row">
+        <div>
+          <label for="playlistName">Nom de la playlist (optionnel)</label>
+          <input type="text" id="playlistName" placeholder="Ex. Digistore" value="Digistore" />
+          <div class="hint">Ligne affichée dans le template. Par défaut : <span class="mono">Digistore</span>.</div>
+        </div>
+        <div></div>
+      </div>
 
-      <label for="m3u">Lien M3U</label>
-      <input type="url" id="m3u" placeholder="Collez ici le lien M3U complet (http/https)…" inputmode="url" autocomplete="off" spellcheck="false"/>
-      <div class="btns">
-        <button id="parseBtn">Générer le template</button>
-        <button id="clearBtn" class="secondary">Effacer</button>
-      </div>
-      <div class="hint">Astuce : après avoir collé, appuyez sur <span class="mono">Entrée</span> ou cliquez sur « Générer ».</div>
+      <label for="m3u">Lien M3U</label>
+      <input type="url" id="m3u" placeholder="Collez ici le lien M3U complet (http/https)…" inputmode="url" autocomplete="off" spellcheck="false"/>
+      <div class="btns">
+        <button id="parseBtn">Générer le template</button>
+        <button id="clearBtn" class="secondary">Effacer</button>
+      </div>
+      <div class="hint">Astuce : après avoir collé, appuyez sur <span class="mono">Entrée</span> ou cliquez sur « Générer ».</div>
 
-      <label for="output" style="margin-top:18px;">Template généré</label>
-      <textarea id="output" readonly placeholder="Le template apparaîtra ici…"></textarea>
-      <div class="btns">
-        <button id="copyBtn">Copier le template</button>
-      </div>
+      <label for="output" style="margin-top:18px;">Template généré</label>
+      <textarea id="output" readonly placeholder="Le template apparaîtra ici…"></textarea>
+      <div class="btns">
+        <button id="copyBtn">Copier le template</button>
+      </div>
 
-      <div class="footer">⚠️ Cette page ne vérifie pas la validité d’un abonnement. Elle se contente de formater les informations fournies.</div>
-    </div>
-  </div>
+      <div class="footer">⚠️ Cette page ne vérifie pas la validité d’un abonnement. Elle se contente de formater les informations fournies.</div>
+    </div>
+  </div>
 
 <script>
-// Version robuste et déboguée.
+// Version robuste (défensive) — ne dépend pas du Clipboard API
 (function(){
-  // Helper function to ensure script runs after DOM is ready
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  
-  ready(function(){
-    const $ = (id) => document.getElementById(id);
-    const m3u = $('m3u');
-    const output = $('output');
-    const playlistName = $('playlistName');
-    const status = $('status');
-    const parseBtn = $('parseBtn');
-    const clearBtn = $('clearBtn');
-    const copyBtn = $('copyBtn');
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(function(){
+    const $ = (id) => document.getElementById(id);
+    const m3u = $('m3u');
+    const output = $('output');
+    const playlistName = $('playlistName');
+    const status = $('status');
+    const parseBtn = $('parseBtn');
+    const clearBtn = $('clearBtn');
+    const copyBtn = $('copyBtn');
 
-    /**
-     * Extracts parameters from the M3U URL, correctly determining the server base URL (including the path).
-     * @param {string} u - The M3U URL string.
-     * @returns {object} Extracted data object.
-     */
-    function extractParams(u){
-      // Initialized with 'serverUrl' instead of 'origin'
-      const res = { username:'', password:'', type:'', output:'', serverUrl:'', raw:'' };
-      try {
-        const url = new URL(u);
-        // Concatenate origin (protocol + hostname + port) with the path (e.g., /get.php)
-        res.serverUrl = url.origin + url.pathname.replace(/\/$/, '');
-        res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
-        res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
-        res.type = url.searchParams.get('type') || '';
-        res.output = url.searchParams.get('output') || '';
-        res.raw = u;
-      } catch (e) {
-        // Log URL parsing errors but continue with empty results
-        console.error("URL Parsing Error:", e);
+    function extractParams(u){
+      const res = { username:'', password:'', type:'', output:'', origin:'', raw:'' };
+      try {
+        const url = new URL(u);
+        res.origin = url.origin;
+        res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
+        res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
+        res.type = url.searchParams.get('type') || '';
+        res.output = url.searchParams.get('output') || '';
+        res.raw = u;
+      } catch (e) {}
+      return res;
+    }
+
+    function buildTemplate(data){
+      const { username, password, origin, raw } = data;
+      const name = (playlistName?.value || 'Digistore').trim();
+      if(!origin || !username || !password){
+        return 'Veuillez fournir un lien M3U valide avec les paramètres "username" et "password".
+
+Exemple :
+http://votre-serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts';
       }
-      return res;
-    }
+      const nameLine = name ? `Nom de la playlist : ${name}
+` : '';
+      return `⚠️ TEST 12 HEURES ⚠️
 
-    /**
-     * Builds the template string from the extracted data.
-     * @param {object} data - Extracted data containing server details.
-     * @returns {string} The formatted template or an error message.
-     */
-    function buildTemplate(data){
-      // Destructure all required fields, including the previously missing type and output
-      const { username, password, serverUrl, raw, type, output } = data;
-      const name = (playlistName?.value || 'Digistore').trim();
-      
-      // Validation check (using serverUrl)
-      if(!serverUrl || !username || !password){
-        return 'Veuillez fournir un lien M3U valide avec les paramètres "username" et "password".\n\nExemple :\nhttp://votre-serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts';
-      }
-      
-      const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
-      // Conditionally include type and output
-      const typeLine = type ? `Type : ${type}\n` : '';
-      const outputLine = output ? `Output : ${output}\n` : '';
-      
-      return `⚠️ TEST 12 HEURES ⚠️\n\n`+
-             `➡️ Code :\n`+
-             `${nameLine}`+
-             `Nom d’utilisateur : ${username}\n`+
-             `Mot de passe : ${password}\n`+
-             `URL du serveur : ${serverUrl}\n`+
-             `${typeLine}`+
-             `${outputLine}\n`+
-             `➡️ Lien M3U :\n`+
-             `${raw}`;
-    }
+`+
+             `➡️ Code :
+`+
+             `${nameLine}`+
+             `Nom d’utilisateur : ${username}
+`+
+             `Mot de passe : ${password}
+`+
+             `URL du serveur : ${origin} 
 
-    /** Main generation function */
-    function generate(){
-      try{
-        const val = (m3u?.value || '').trim();
-        // Reset status immediately before generation
-        status.textContent = 'Génération en cours...';
-        
-        if(!val){ status.textContent = 'Aucun lien M3U fourni.'; output.value = ''; return; }
-        
-        const data = extractParams(val);
-        const tpl = buildTemplate(data);
-        output.value = tpl;
-        
-        // Check for the error message in the output
-        if (tpl.startsWith('Veuillez fournir')) { 
-          status.innerHTML = '<span class="warn">Lien invalide</span>'; 
-        } else { 
-          status.innerHTML = '<span class="ok">Template prêt ✔</span>'; 
-        }
-      }catch(err){ 
-        console.error('Erreur de génération:', err); 
-        status.innerHTML = '<span class="warn">Erreur de génération</span>'; 
-      }
-    }
+`+
+             `➡️ Lien M3U :
+`+
+             `${raw}`;
+    }
 
-    /** Visual feedback after successful copy */
-    function flashCopied(){
-      const old = output.style.boxShadow;
-      output.style.boxShadow = `0 0 0 4px var(--accent)`;
-      
-      const oldTxt = copyBtn.textContent; 
-      copyBtn.textContent = 'Copié !';
-      status.innerHTML = '<span class="ok">Copié dans le presse-papiers !</span>';
+    function generate(){
+      try{
+        const val = (m3u?.value || '').trim();
+        if(!val){ status.textContent = 'Aucun lien M3U fourni.'; output.value = ''; return; }
+        const data = extractParams(val);
+        const tpl = buildTemplate(data);
+        output.value = tpl;
+        if (tpl.startsWith('Veuillez fournir')) { status.innerHTML = '<span class="warn">Lien invalide</span>'; }
+        else { status.innerHTML = '<span class="ok">Template prêt ✔</span>'; }
+      }catch(err){ console.error(err); status.textContent='Erreur de génération'; }
+    }
 
-      setTimeout(()=>{ 
-        output.style.boxShadow = old; 
-        copyBtn.textContent = oldTxt; 
-        // Reset status after a short delay
-        if (!output.value.startsWith('Veuillez fournir')) {
-            status.innerHTML = '<span class="ok">Template prêt ✔</span>';
-        } else {
-            status.innerHTML = '<span class="warn">Lien invalide</span>';
-        }
-      }, 1200);
-    }
+    function flashCopied(){
+      const old = output.style.boxShadow;
+      output.style.boxShadow = '0 0 0 2px rgba(79,140,255,.6)';
+      setTimeout(()=>{ output.style.boxShadow = old; }, 300);
+      const oldTxt = copyBtn.textContent; copyBtn.textContent = 'Copié !';
+      setTimeout(()=> copyBtn.textContent = oldTxt, 1200);
+    }
 
-    /**
-     * FALLBACK COPY LOGIC: Uses document.execCommand('copy') on a hidden textarea.
-     * CRITICAL FIX: Removed native alert() which caused blocking issues.
-     */
-    function fallbackCopy(){
-      if(!output.value) return;
-      
-      const ta = document.createElement('textarea');
-      ta.value = output.value;
-      ta.setAttribute('readonly','');
-      // Move off-screen instead of using opacity 0, for better browser compatibility
-      ta.style.position = 'fixed'; 
-      ta.style.top = '-9999px'; 
-      ta.style.left = '-9999px';
-      
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      
-      let copied = false;
-      try { 
-        copied = document.execCommand('copy'); 
-      } catch(e){
-        console.error('document.execCommand failed:', e);
-      }
-      
-      document.body.removeChild(ta);
+    function fallbackCopy(){
+      if(!output.value) return;
+      const ta = document.createElement('textarea');
+      ta.value = output.value;
+      ta.setAttribute('readonly','');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); flashCopied(); }
+      catch(e){
+        // dernière chance: sélectionne dans la zone en lecture seule
+        output.removeAttribute('readonly'); output.focus(); output.select();
+        document.execCommand('copy'); output.setAttribute('readonly','');
+        alert('Texte sélectionné. Faites Ctrl+C / Cmd+C.');
+      }
+      document.body.removeChild(ta);
+    }
 
-      if(copied) {
-        flashCopied(); 
-      } else {
-        // Non-blocking status update to replace the forbidden alert()
-        status.innerHTML = '<span class="warn">Échec de la copie. Sélectionnez le texte et utilisez Ctrl+C / Cmd+C.</span>';
-        // Ensure the output field is focused and selected for manual copy
-        output.focus(); output.select();
-      }
-    }
+    function copyOut(){
+      try{
+        if (navigator.clipboard && window.isSecureContext){
+          navigator.clipboard.writeText(output.value).then(flashCopied).catch(fallbackCopy);
+        } else { fallbackCopy(); }
+      }catch(e){ fallbackCopy(); }
+    }
 
-    /** Main copy function, attempts Clipboard API first */
-    function copyOut(){
-      if(!output.value) return;
-
-      // Use modern Clipboard API if available and in a secure context
-      if (navigator.clipboard && window.isSecureContext){
-        navigator.clipboard.writeText(output.value)
-          .then(flashCopied)
-          .catch(e => {
-            console.warn("Clipboard API failed, falling back:", e);
-            fallbackCopy(); 
-          });
-      } else { 
-        // Fallback if API is not available or context is insecure
-        fallbackCopy(); 
-      }
-    }
-
-    // --- Event Listeners ---
-    parseBtn?.addEventListener('click', generate);
-    
-    clearBtn?.addEventListener('click', ()=>{ 
-      m3u.value=''; 
-      output.value=''; 
-      status.textContent='En attente d\'un lien…'; 
-      m3u.focus(); // Set focus back to input for usability
-    });
-    
-    copyBtn?.addEventListener('click', copyOut);
-    
-    // Generate on Enter keydown
-    m3u?.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); generate(); } });
-    
-    // Generate automatically on paste
-    m3u?.addEventListener('paste', ()=>{ setTimeout(generate, 0); });
-  });
+    parseBtn?.addEventListener('click', generate);
+    clearBtn?.addEventListener('click', ()=>{ m3u.value=''; output.value=''; status.textContent='En attente d\'un lien…'; });
+    copyBtn?.addEventListener('click', copyOut);
+    m3u?.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); generate(); } });
+    m3u?.addEventListener('paste', ()=>{ setTimeout(generate, 0); });
+  });
 })();
 </script>
 </body>
