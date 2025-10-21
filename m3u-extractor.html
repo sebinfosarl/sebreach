@@ -82,16 +82,7 @@
   const playlistName = $('playlistName');
   const status = $('status');
 
-  function parseServerOrigin(u){
-    // Retourne protocole+host+port (sans chemin), ex: http://fr1.lion-tt.xyz:80
-    try {
-      const url = new URL(u);
-      return url.origin; // inclut protocole, host, port si présent
-    } catch(e){ return ''; }
-  }
-
   function extractParams(u){
-    // Récupère username / password / type / output depuis l'URL
     const res = { username:'', password:'', type:'', output:'', origin:'', raw:'' };
     try {
       const url = new URL(u);
@@ -101,9 +92,7 @@
       res.type = url.searchParams.get('type') || '';
       res.output = url.searchParams.get('output') || '';
       res.raw = u;
-    } catch (e) {
-      // si ce n'est pas une URL valide, on laisse vide
-    }
+    } catch (e) {}
     return res;
   }
 
@@ -112,22 +101,31 @@
     const name = (playlistName.value || 'Digistore').trim();
 
     if(!origin || !username || !password){
-      return 'Veuillez fournir un lien M3U valide avec les paramètres "username" et "password".\n\nExemple :\nhttp://votre-serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts';
+      return 'Veuillez fournir un lien M3U valide avec les paramètres "username" et "password".
+
+Exemple :
+http://votre-serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts';
     }
 
-    // Bloc "Nom de la playlist" (optionnel)
-    const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
+    const nameLine = name ? `Nom de la playlist : ${name}
+` : '';
 
-    return (
-`⚠️ TEST 12 HEURES ⚠️\n\n` +
-`➡️ Code :\n` +
-`${nameLine}` +
-`Nom d’utilisateur : ${username}\n` +
-`Mot de passe : ${password}\n` +
-`URL du serveur : ${origin} \n\n` +
-`➡️ Lien M3U :\n` +
-`${raw}`
-    );
+    return `⚠️ TEST 12 HEURES ⚠️
+
+`+
+`➡️ Code :
+`+
+`${nameLine}`+
+`Nom d’utilisateur : ${username}
+`+
+`Mot de passe : ${password}
+`+
+`URL du serveur : ${origin} 
+
+`+
+`➡️ Lien M3U :
+`+
+`${raw}`;
   }
 
   function generate(){
@@ -144,35 +142,6 @@
     else { status.innerHTML = '<span class="ok">Template prêt ✔</span>'; }
   }
 
-  function copyOut(){
-    if(!output.value){ return; }
-    // Méthode moderne
-    navigator.clipboard.writeText(output.value).then(()=>{
-      flashCopied();
-    }).catch(()=>{
-      // Fallback (HTTP, permissions, anciens navigateurs)
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = output.value;
-        ta.setAttribute('readonly','');
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
-        if(ok){ flashCopied(); } else { throw new Error('execCommand failed'); }
-      } catch(e){
-        // Dernier recours : sélection manuelle
-        output.removeAttribute('readonly');
-        output.select();
-        output.setSelectionRange(0, output.value.length);
-        output.setAttribute('readonly','');
-        alert('Copie automatique impossible. Le texte a été sélectionné, faites Ctrl+C / Cmd+C.');
-      }
-    });
-  }
-
   function flashCopied(){
     const old = output.style.boxShadow;
     output.style.boxShadow = '0 0 0 2px rgba(79,140,255,.6)';
@@ -182,17 +151,37 @@
     btn.textContent = 'Copié !';
     setTimeout(()=> btn.textContent = oldTxt, 1200);
   }
-    navigator.clipboard.writeText(output.value).then(()=>{
-      const old = output.style.boxShadow;
-      output.style.boxShadow = '0 0 0 2px rgba(79,140,255,.6)';
-      setTimeout(()=>{ output.style.boxShadow = old; }, 300);
-      const btn = document.getElementById('copyBtn');
-      const oldTxt = btn.textContent;
-      btn.textContent = 'Copié !';
-      setTimeout(()=> btn.textContent = oldTxt, 1200);
-    }).catch(()=>{
-      alert('Impossible de copier automatiquement. Sélectionnez et copiez manuellement.');
-    });
+
+  function fallbackCopy(){
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = output.value;
+      ta.setAttribute('readonly','');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if(ok){ flashCopied(); } else { throw new Error('execCommand failed'); }
+    } catch(e){
+      output.removeAttribute('readonly');
+      output.select();
+      output.setSelectionRange(0, output.value.length);
+      output.setAttribute('readonly','');
+      alert('Copie automatique impossible. Le texte a été sélectionné, faites Ctrl+C / Cmd+C.');
+    }
+  }
+
+  function copyOut(){
+    if(!output.value){ return; }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(output.value).then(()=>{
+        flashCopied();
+      }).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
   }
 
   // Events
