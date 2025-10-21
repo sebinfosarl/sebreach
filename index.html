@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formations & Services Odoo — Paiement sécurisé via Payhip</title>
+  <meta name="description" content="Achetez nos services Odoo 17 en un clic. Paiement sécurisé via Payhip." />
+  <link rel="preconnect" href="https://payhip.com" />
+  <style>
+    :root { --bg:#0f1115; --card:#151922; --text:#eaf0ff; --muted:#9aa3b2; --accent:#22c55e; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1100px;margin:auto;padding:28px}
+    header{text-align:center;margin-bottom:22px}
+    h1{margin:0 0 8px;font-size:28px}
+    .lead{margin:0;color:var(--muted)}
+    .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:24px}
+    .card{background:var(--card);border:1px solid #202636;border-radius:16px;padding:18px;display:flex;flex-direction:column;justify-content:space-between}
+    .title{font-weight:800;margin:0 0 6px}
+    .desc{color:var(--muted);font-size:14px;margin:0 0 12px;min-height:2.6em}
+    .price{font-weight:700;margin:0 0 14px}
+    .btn{display:inline-block;text-align:center;padding:12px 16px;border-radius:12px;background:var(--accent);color:#072; /* ensures white text contrast */
+         color:#fff;text-decoration:none;font-weight:800}
+    .btn:active{transform:translateY(1px)}
+    footer{margin-top:26px;text-align:center;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Services Odoo 17 — Paiement en 1 clic</h1>
+      <p class="lead">Cliquez “Acheter Maintenant” pour un paiement sécurisé via Payhip (modal). | الدفع عبر بايهب</p>
+    </header>
+
+    <section class="grid">
+      <!-- 1) Setup & Integrate WhatsApp - Odoo 17 -->
+      <article class="card">
+        <div>
+          <h3 class="title">Setup & Intégration WhatsApp — Odoo 17</h3>
+          <p class="desc">Installation + configuration + tests d’envoi/réception sur WhatsApp Business.</p>
+          <p class="price">Prix: — MAD</p>
+        </div>
+        <a class="btn payhip-buy-button"
+           href="https://payhip.com/b/PAYHIP_CODE_1"
+           data-product="PAYHIP_CODE_1"
+           data-theme="green">Acheter Maintenant</a>
+      </article>
+
+      <!-- 2) Odoo 17 Dynamic Dashboard — Installation & Personnalisation Avancée -->
+      <article class="card">
+        <div>
+          <h3 class="title">Odoo 17 Dynamic Dashboard — Setup + Custom Avancée</h3>
+          <p class="desc">Installation, widgets, filtres, KPIs et personnalisation avancée.</p>
+          <p class="price">Prix: — MAD</p>
+        </div>
+        <a class="btn payhip-buy-button"
+           href="https://payhip.com/b/PAYHIP_CODE_2"
+           data-product="PAYHIP_CODE_2"
+           data-theme="green">Acheter Maintenant</a>
+      </article>
+
+      <!-- 3) Product / Placeholder -->
+      <article class="card">
+        <div>
+          <h3 class="title">Service 3</h3>
+          <p class="desc">Ajoutez ici une phrase claire sur le bénéfice client.</p>
+          <p class="price">Prix: — MAD</p>
+        </div>
+        <a class="btn payhip-buy-button"
+           href="https://payhip.com/b/PAYHIP_CODE_3"
+           data-product="PAYHIP_CODE_3"
+           data-theme="blue">Acheter Maintenant</a>
+      </article>
+
+      <!-- 4) Product / Placeholder -->
+      <article class="card">
+        <div>
+          <h3 class="title">Service 4</h3>
+          <p class="desc">Ce que le client obtient (résultat concret).</p>
+          <p class="price">Prix: — MAD</p>
+        </div>
+        <a class="btn payhip-buy-button"
+           href="https://payhip.com/b/PAYHIP_CODE_4"
+           data-product="PAYHIP_CODE_4"
+           data-theme="dark">Acheter Maintenant</a>
+      </article>
+
+      <!-- 5) Product / Placeholder -->
+      <article class="card">
+        <div>
+          <h3 class="title">Service 5</h3>
+          <p class="desc">Détail rapide: installation, support, livrables.</p>
+          <p class="price">Prix: — MAD</p>
+        </div>
+        <a class="btn payhip-buy-button"
+           href="https://payhip.com/b/PAYHIP_CODE_5"
+           data-product="PAYHIP_CODE_5"
+           data-theme="green">Acheter Maintenant</a>
+      </article>
+
+      <!-- 6) Product / Placeholder -->
+      <article class="card">
+        <div>
+          <h3 class="title">Service 6</h3>
+          <p class="desc">Une promesse simple, claire et crédible.</p>
+          <p class="price">Prix: — MAD</p>
+        </div>
+        <a class="btn payhip-buy-button"
+           href="https://payhip.com/b/PAYHIP_CODE_6"
+           data-product="PAYHIP_CODE_6"
+           data-theme="blue">Acheter Maintenant</a>
+      </article>
+    </section>
+
+    <footer>Payhip modal activé • Paiement sécurisé • Need help? WhatsApp: <a href="https://wa.me/2126XXXXXXX" style="color:#eaf0ff">+212 6 XX XX XX XX</a></footer>
+  </div>
+
+  <!-- Load Payhip once (for all buttons) -->
+  <script src="https://payhip.com/payhip.js"></script>
+</body>
+</html>
