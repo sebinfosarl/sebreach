@@ -29,8 +29,17 @@
     .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 
     /* Extractor */
-    .drop{border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;text-align:center;cursor:pointer}
+    .drop{
+      position:relative; /* so the input can overlay */
+      border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;
+      text-align:center;cursor:pointer; user-select:none;
+    }
     .drop.drag{border-color:var(--accent);background:#0e1320}
+    /* The REAL file input is not hidden; it overlays and captures taps/clicks */
+    .drop input[type="file"]{
+      position:absolute; inset:0; width:100%; height:100%;
+      opacity:0; cursor:pointer; /* still interactive */
+    }
     img#preview{max-width:100%;border-radius:12px;margin-top:12px}
     .result{margin-top:16px;background:#0e1118;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
     .row{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 0}
@@ -76,8 +85,9 @@
 
     <label class="muted">Image</label>
     <div id="drop" class="drop">
-      Touchez ici pour choisir / prendre une photo<br/>
-      <input id="file" type="file" accept="image/*" capture="environment" hidden>
+      <div> Touchez / cliquez pour choisir, ou faites glisser une image ici </div>
+      <!-- Overlay input: works on phone + desktop -->
+      <input id="file" type="file" accept="image/*" capture="environment" aria-label="Choisir une image">
     </div>
     <img id="preview" alt="Aperçu">
 
@@ -114,7 +124,7 @@
         <button class="copybtn" type="button" data-copy="#did">Copier</button>
       </div>
     </div>
-    <p class="note">Analyse via votre proxy Cloudflare. Sur mobile, l’image reste chargée après le clic.</p>
+    <p class="note">Astuce mobile : utilisez l’appareil photo pour des images nettes. L’image reste chargée après le clic.</p>
   </section>
 
   <!-- ===== M3U Generator ===== -->
@@ -254,7 +264,10 @@ async function runOpenAIVision(e){
   const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
 
-  if(!preview.src) preview.src = URL.createObjectURL(file);
+  if(!preview.src) {
+    // Keep a persistent preview (data URL) so mobile doesn't lose it
+    preview.src = URL.createObjectURL(file);
+  }
 
   resetOut();
   setStatus('Analyse OpenAI…');
@@ -305,9 +318,17 @@ async function runOpenAIVision(e){
   }
 }
 
-/* Mobile-safe UI */
-drop.addEventListener('click', (e)=>{ e.preventDefault(); fileInput.click(); });
-drop.addEventListener('touchstart', (e)=>{}, {passive:true});
+/* File selection — keep a strong ref for mobile */
+fileInput.addEventListener('change', async ()=>{
+  if(fileInput.files?.[0]){
+    currentFile = fileInput.files[0];
+    // DataURL preview so it persists even if FileList resets on mobile
+    preview.src = await readFile(currentFile);
+    setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
+  }
+});
+
+/* Drag & drop (desktop) */
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
 drop.addEventListener('drop', async e=>{
@@ -315,15 +336,11 @@ drop.addEventListener('drop', async e=>{
   if(e.dataTransfer.files?.length){
     currentFile = e.dataTransfer.files[0];
     preview.src = URL.createObjectURL(currentFile);
-  }
-});
-fileInput.addEventListener('change', async ()=>{
-  if(fileInput.files?.[0]){
-    currentFile = fileInput.files[0];
-    preview.src = await readFile(currentFile); // dataURL -> persists on mobile
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
   }
 });
+
+/* Buttons */
 runAiBtn.addEventListener('click', runOpenAIVision);
 clearBtn.addEventListener('click', (e)=>{
   e.preventDefault();
@@ -444,6 +461,7 @@ clearBtn.addEventListener('click', (e)=>{
 </script>
 </body>
 </html>
+
 
 
 
