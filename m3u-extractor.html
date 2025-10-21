@@ -30,16 +30,20 @@
 
     /* Extractor */
     .drop{
-      position:relative; /* so the input can overlay */
+      position:relative;
       border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;
       text-align:center;cursor:pointer; user-select:none;
     }
     .drop.drag{border-color:var(--accent);background:#0e1320}
-    /* The REAL file input is not hidden; it overlays and captures taps/clicks */
+    /* Le vrai input recouvre la zone (invisible mais cliquable) */
     .drop input[type="file"]{
       position:absolute; inset:0; width:100%; height:100%;
-      opacity:0; cursor:pointer; /* still interactive */
+      opacity:0; cursor:pointer;
     }
+    .pick-row{display:flex;align-items:center;gap:10px;margin:8px 0 0 0;justify-content:center}
+    .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+    .switch input{width:20px;height:20px}
+
     img#preview{max-width:100%;border-radius:12px;margin-top:12px}
     .result{margin-top:16px;background:#0e1118;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
     .row{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 0}
@@ -84,11 +88,18 @@
     <p class="lead">Téléversez l’image → obtenez <b>Site</b>, <b>MAC</b>, <b>Device Key</b>, <b>Device ID</b> via <b>OpenAI (proxy)</b>.</p>
 
     <label class="muted">Image</label>
-    <div id="drop" class="drop">
+    <div id="drop" class="drop" aria-label="Sélecteur d'image">
       <div> Touchez / cliquez pour choisir, ou faites glisser une image ici </div>
-      <!-- Overlay input: works on phone + desktop -->
-      <input id="file" type="file" accept="image/*" capture="environment" aria-label="Choisir une image">
+      <!-- IMPORTANT : pas de capture par défaut -> permet de choisir Galerie/Fichiers -->
+      <input id="file" type="file" accept="image/*" aria-label="Choisir une image">
     </div>
+    <div class="pick-row">
+      <label class="switch" title="Activer pour prendre une photo directement">
+        <input id="toggleCamera" type="checkbox">
+        Utiliser la caméra
+      </label>
+    </div>
+
     <img id="preview" alt="Aperçu">
 
     <div class="btns">
@@ -124,7 +135,7 @@
         <button class="copybtn" type="button" data-copy="#did">Copier</button>
       </div>
     </div>
-    <p class="note">Astuce mobile : utilisez l’appareil photo pour des images nettes. L’image reste chargée après le clic.</p>
+    <p class="note">Par défaut, vous choisissez dans la galerie/fichiers. Activez “Utiliser la caméra” pour ouvrir directement l’appareil photo.</p>
   </section>
 
   <!-- ===== M3U Generator ===== -->
@@ -199,7 +210,7 @@ tabs.forEach(btn=>{
 });
 
 /* ---------- Extractor (OpenAI only, mobile-safe) ---------- */
-const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // <-- remplacez par VOTRE URL (avec https://)
+const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // <-- remplace par TON URL (https://)
 
 const $ = (s)=> document.querySelector(s);
 const statusEl = $('#status');
@@ -215,10 +226,21 @@ const drop       = $('#drop');
 const preview    = $('#preview');
 const runAiBtn   = $('#runAi');
 const clearBtn   = $('#clear');
+const toggleCamera = $('#toggleCamera');
 
 let currentFile = null;
 let isBusy = false;
 
+/* Basculer capture ON/OFF selon le switch */
+toggleCamera.addEventListener('change', ()=>{
+  if(toggleCamera.checked){
+    fileInput.setAttribute('capture','environment'); // force caméra
+  }else{
+    fileInput.removeAttribute('capture'); // autorise galerie/fichiers
+  }
+});
+
+/* Copie */
 function copyFrom(sel){
   const node = document.querySelector(sel); if(!node) return;
   const txt = node.textContent.trim(); if(!txt) return;
@@ -264,10 +286,7 @@ async function runOpenAIVision(e){
   const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
 
-  if(!preview.src) {
-    // Keep a persistent preview (data URL) so mobile doesn't lose it
-    preview.src = URL.createObjectURL(file);
-  }
+  if(!preview.src) preview.src = URL.createObjectURL(file);
 
   resetOut();
   setStatus('Analyse OpenAI…');
@@ -318,12 +337,11 @@ async function runOpenAIVision(e){
   }
 }
 
-/* File selection — keep a strong ref for mobile */
+/* Sélection de fichier (garde une ref forte pour iOS/Android) */
 fileInput.addEventListener('change', async ()=>{
-  if(fileInput.files?.[0]){
+  if(fileInput.files?.length){
     currentFile = fileInput.files[0];
-    // DataURL preview so it persists even if FileList resets on mobile
-    preview.src = await readFile(currentFile);
+    preview.src = await readFile(currentFile); // dataURL => persiste
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
   }
 });
@@ -340,7 +358,7 @@ drop.addEventListener('drop', async e=>{
   }
 });
 
-/* Buttons */
+/* Boutons */
 runAiBtn.addEventListener('click', runOpenAIVision);
 clearBtn.addEventListener('click', (e)=>{
   e.preventDefault();
@@ -352,115 +370,113 @@ clearBtn.addEventListener('click', (e)=>{
 
 /* ---------- M3U Generator ---------- */
 (function(){
-  function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  onReady(function(){
-    const $id = (id) => document.getElementById(id);
-    const status = $id('m3uStatus');
-    const nameInput = $id('playlistName');
-    const durationSel = $id('duration');
-    const urlInput = $id('m3uInput');
-    const out = $id('output');
+  const $id = (id) => document.getElementById(id);
+  const status = $id('m3uStatus');
+  const nameInput = $id('playlistName');
+  const durationSel = $id('duration');
+  const urlInput = $id('m3uInput');
+  const out = $id('output');
 
-    const f_m3u = $id('x_m3u');
-    const f_user = $id('x_user');
-    const f_pass = $id('x_pass');
-    const f_url  = $id('x_url');
-    const f_combo = $id('x_combo');
+  const f_m3u = $id('x_m3u');
+  const f_user = $id('x_user');
+  const f_pass = $id('x_pass');
+  const f_url  = $id('x_url');
+  const f_combo = $id('x_combo');
 
-    function extract(u){
-      const res = {username:'', password:'', origin:'', raw:''};
-      try{
-        const url = new URL(u);
-        const m = /^([a-z]+:)(\/\/)?([^/]+)/i.exec(u);
-        const protoRaw = (m && m[1]) ? m[1].toLowerCase() : (url.protocol || 'http:');
-        const proto = protoRaw.endsWith(':') ? protoRaw + '//' : protoRaw;
-        const hostPort = m ? m[3] : (url.host || '');
-        res.origin = proto + hostPort;
-        res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
-        res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
-        res.raw = u;
-      }catch(e){}
-      return res;
+  function extract(u){
+    const res = {username:'', password:'', origin:'', raw:''};
+    try{
+      const url = new URL(u);
+      const m = /^([a-z]+:)(\/\/)?([^/]+)/i.exec(u);
+      const protoRaw = (m && m[1]) ? m[1].toLowerCase() : (url.protocol || 'http:');
+      const proto = protoRaw.endsWith(':') ? protoRaw + '//' : protoRaw;
+      const hostPort = m ? m[3] : (url.host || '');
+      res.origin = proto + hostPort;
+      res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
+      res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
+      res.raw = u;
+    }catch(e){}
+    return res;
+  }
+
+  function build(){
+    const link = (urlInput.value||'').trim();
+    if(!link){
+      status.textContent = "Aucun lien M3U fourni."; out.value=''; fillExtras(null); return;
     }
-
-    function build(){
-      const link = (urlInput.value||'').trim();
-      if(!link){
-        status.textContent = "Aucun lien M3U fourni."; out.value=''; fillExtras(null); return;
-      }
-      const {username, password, origin, raw} = extract(link);
-      const name = (nameInput.value||'Digistore').trim();
-      const duration = (durationSel?.value || '12H');
-      if(!origin || !username || !password){
-        out.value = `Veuillez fournir un lien M3U valide avec "username" et "password".\n\nExemple :\nhttp://serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts`;
-        status.innerHTML = '<span class="warn">Lien invalide</span>'; fillExtras(null); return;
-      }
-      const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
-      out.value = `⚠️ TEST ${duration} ⚠️\n\n`+
-                  `➡️ Code :\n`+
-                  `${nameLine}`+
-                  `Nom d’utilisateur : ${username}\n`+
-                  `Mot de passe : ${password}\n`+
-                  `URL du serveur : ${origin} \n\n`+
-                  `➡️ Lien M3U :\n`+
-                  `${raw}`;
-      status.innerHTML = '<span class="ok">Template prêt ✔</span>';
-      fillExtras({raw, username, password, origin});
+    const {username, password, origin, raw} = extract(link);
+    const name = (nameInput.value||'Digistore').trim();
+    const duration = (durationSel?.value || '12H');
+    if(!origin || !username || !password){
+      out.value = `Veuillez fournir un lien M3U valide avec "username" et "password".\n\nExemple :\nhttp://serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts`;
+      status.innerHTML = '<span class="warn">Lien invalide</span>'; fillExtras(null); return;
     }
+    const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
+    out.value = `⚠️ TEST ${duration} ⚠️\n\n`+
+                `➡️ Code :\n`+
+                `${nameLine}`+
+                `Nom d’utilisateur : ${username}\n`+
+                `Mot de passe : ${password}\n`+
+                `URL du serveur : ${origin} \n\n`+
+                `➡️ Lien M3U :\n`+
+                `${raw}`;
+    status.innerHTML = '<span class="ok">Template prêt ✔</span>';
+    fillExtras({raw, username, password, origin});
+  }
 
-    function fillExtras(data){
-      if(!data){ f_m3u.value = f_user.value = f_pass.value = f_url.value = f_combo.value = ''; return; }
-      f_m3u.value = data.raw || '';
-      f_user.value = data.username || '';
-      f_pass.value = data.password || '';
-      f_url.value  = data.origin || '';
-      f_combo.value = `Username : ${data.username} / Password : ${data.password} / URL : ${data.origin}`;
+  function fillExtras(data){
+    if(!data){ f_m3u.value = f_user.value = f_pass.value = f_url.value = f_combo.value = ''; return; }
+    f_m3u.value = data.raw || '';
+    f_user.value = data.username || '';
+    f_pass.value = data.password || '';
+    f_url.value  = data.origin || '';
+    f_combo.value = `Username : ${data.username} / Password : ${data.password} / URL : ${data.origin}`;
+  }
+
+  function copyPlain(text, onDone){
+    if(!text) return;
+    const done = () => { if(onDone) onDone(); };
+    if(navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else { fallback(); }
+    function fallback(){
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try{ document.execCommand('copy'); }catch(e){}
+      document.body.removeChild(ta); done();
     }
+  }
 
-    function copyPlain(text, onDone){
-      if(!text) return;
-      const done = () => { if(onDone) onDone(); };
-      if(navigator.clipboard && window.isSecureContext){
-        navigator.clipboard.writeText(text).then(done).catch(fallback);
-      } else { fallback(); }
-      function fallback(){
-        const ta = document.createElement('textarea');
-        ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
-        document.body.appendChild(ta); ta.focus(); ta.select();
-        try{ document.execCommand('copy'); }catch(e){}
-        document.body.removeChild(ta); done();
-      }
-    }
-
-    function copyFromSelector(sel){
-      const el = document.querySelector(sel);
-      if(!el) return;
-      copyPlain(el.value||'', () => {
-        const old = status.textContent; status.textContent = 'Copié !';
-        setTimeout(()=> status.textContent = old || '', 900);
-      });
-    }
-
-    function clearAll(){ urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; }
-
-    $id('generateBtn').addEventListener('click', build);
-    $id('copyBtn').addEventListener('click', ()=> copyPlain(out.value||'', () => {
-      const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
-    }));
-    $id('clearBtn').addEventListener('click', clearAll);
-
-    document.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button[data-copy]'); if(!btn) return;
-      const sel = btn.getAttribute('data-copy'); copyFromSelector(sel);
+  function copyFromSelector(sel){
+    const el = document.querySelector(sel);
+    if(!el) return;
+    copyPlain(el.value||'', () => {
+      const old = status.textContent; status.textContent = 'Copié !';
+      setTimeout(()=> status.textContent = old || '', 900);
     });
+  }
 
-    urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
-    urlInput.addEventListener('paste', ()=>{ setTimeout(build, 0); });
+  function clearAll(){ urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; }
+
+  document.getElementById('generateBtn').addEventListener('click', build);
+  document.getElementById('copyBtn').addEventListener('click', ()=> copyPlain(out.value||'', () => {
+    const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
+  }));
+  document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-copy]'); if(!btn) return;
+    const sel = btn.getAttribute('data-copy'); copyFromSelector(sel);
   });
+
+  urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
+  urlInput.addEventListener('paste', ()=>{ setTimeout(build, 0); });
 })();
 </script>
 </body>
 </html>
+
 
 
 
