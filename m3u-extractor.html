@@ -14,7 +14,7 @@
     .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
     .tabbtn{cursor:pointer;background:#2a3144;border:1px solid rgba(255,255,255,.06);color:#fff;padding:10px 14px;border-radius:12px;font-weight:600}
     .tabbtn.active{background:var(--accent)}
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.35)}
     h1{margin:0 0 6px}
     p.lead{margin:0 0 14px;color:var(--muted)}
     .muted{color:var(--muted);font-size:13px}
@@ -24,10 +24,7 @@
     .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 
     /* Extracteur */
-    .drop{
-      position:relative;border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;
-      text-align:center;cursor:pointer; user-select:none;
-    }
+    .drop{position:relative;border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;text-align:center;cursor:pointer; user-select:none;}
     .drop.drag{border-color:var(--accent);background:#0e1320}
     .drop input[type="file"]{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;}
     .pick-row{display:flex;align-items:center;gap:10px;margin:8px 0 0 0;justify-content:center}
@@ -44,6 +41,10 @@
     .copybtn{background:#2a3144;padding:10px 12px;border-radius:8px;font-size:13px}
     .status{margin-top:10px;color:var(--muted)}
     .note{margin-top:14px;color:var(--muted);font-size:12px}
+
+    /* Zone debug (peut être masquée si tout va bien) */
+    #debugWrap{margin-top:10px;display:none}
+    #debug{white-space:pre-wrap;background:#0c0f16;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;font-size:12px;color:#9aa3b2}
 
     /* M3U generator */
     .grid{display:grid;grid-template-columns:1fr;gap:16px}
@@ -99,6 +100,13 @@
       <div class="row"><div class="label">Clé appareil</div><div id="dkey" class="value"></div><button class="copybtn" type="button" data-copy="#dkey">Copier</button></div>
       <div class="row"><div class="label">Device ID</div><div id="did" class="value"></div><button class="copybtn" type="button" data-copy="#did">Copier</button></div>
     </div>
+
+    <!-- Debug visible si erreur -->
+    <div id="debugWrap">
+      <div class="muted">Debug</div>
+      <pre id="debug"></pre>
+    </div>
+
     <p class="note">Par défaut, vous choisissez dans la galerie/fichiers. Activez “Utiliser la caméra” pour ouvrir directement l’appareil photo.</p>
   </section>
 
@@ -142,7 +150,7 @@
 </div>
 
 <script>
-/* Onglets */
+/* ---------- Onglets ---------- */
 document.querySelectorAll('.tabbtn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
@@ -152,19 +160,22 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
   });
 });
 
-/* Extracteur */
-const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← ta vraie URL, sans slash final
+/* ---------- Extracteur ---------- */
+const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← ta vraie URL, SANS slash final
 
 const $ = (s)=> document.querySelector(s);
 const statusEl = $('#status');
-const setStatus = (t, cls='') => { statusEl.className='status '+(cls||''); statusEl.textContent=t; };
-
 const siteLink = $('#siteLink'), macEl = $('#mac'), macPlainEl = $('#macplain'), dkeyEl = $('#dkey'), didEl = $('#did');
 const fileInput = $('#file'), drop = $('#drop'), preview = $('#preview');
 const runAiBtn = $('#runAi'), clearBtn = $('#clear'), toggleCamera = $('#toggleCamera');
+const debugWrap = $('#debugWrap'), debugEl = $('#debug');
 
 let currentFile = null;
 let isBusy = false;
+
+function setStatus(text, cls=''){ statusEl.className='status '+(cls||''); statusEl.textContent=text; }
+function showDebug(msg){ debugWrap.style.display='block'; debugEl.textContent = (debugEl.textContent? debugEl.textContent+'\n':'') + msg; }
+function hideDebug(){ debugWrap.style.display='none'; debugEl.textContent=''; }
 
 /* Caméra ON/OFF (galerie par défaut) */
 toggleCamera.addEventListener('change', ()=>{
@@ -173,15 +184,13 @@ toggleCamera.addEventListener('change', ()=>{
 });
 
 /* Copier */
-function copyFrom(sel){
-  const node = document.querySelector(sel); if(!node) return;
-  const txt = node.textContent.trim(); if(!txt) return;
-  navigator.clipboard?.writeText(txt);
-  setStatus('Copié !', 'ok'); setTimeout(()=>setStatus('Prêt.'), 900);
-}
 document.addEventListener('click', e=>{
   const b = e.target.closest('[data-copy]'); if(!b) return;
-  e.preventDefault(); copyFrom(b.getAttribute('data-copy'));
+  e.preventDefault();
+  const node = document.querySelector(b.getAttribute('data-copy')); if(!node) return;
+  const txt = node.textContent.trim(); if(!txt) return;
+  navigator.clipboard?.writeText(txt);
+  setStatus('Copié !','ok'); setTimeout(()=>setStatus('Prêt.'),900);
 });
 
 /* Reset résultats */
@@ -200,8 +209,8 @@ function readFileAsDataURL(file){
   });
 }
 
-/* Compression (1200px, JPEG 0.72) */
-async function compressImageToDataURL(file, maxSize=1200, quality=0.72){
+/* Compression (max 1000px, JPEG 0.68) — encore plus sûr sur mobile */
+async function compressImageToDataURL(file, maxSize=1000, quality=0.68){
   const dataUrl = await readFileAsDataURL(file);
 
   const img = new Image();
@@ -212,7 +221,7 @@ async function compressImageToDataURL(file, maxSize=1200, quality=0.72){
   const width = img.naturalWidth || img.width;
   const height = img.naturalHeight || img.height;
 
-  if (Math.max(width, height) <= maxSize && dataUrl.length < 3.5 * 1024 * 1024) {
+  if (Math.max(width, height) <= maxSize && dataUrl.length < 3 * 1024 * 1024) {
     return dataUrl;
   }
 
@@ -221,11 +230,11 @@ async function compressImageToDataURL(file, maxSize=1200, quality=0.72){
 
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d', { willReadFrequently: false });
+  const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, w, h);
 
   let out = canvas.toDataURL('image/jpeg', quality);
-  if (out.length > 3.8 * 1024 * 1024) { out = canvas.toDataURL('image/jpeg', 0.6); }
+  if (out.length > 3.2 * 1024 * 1024) { out = canvas.toDataURL('image/jpeg', 0.6); }
   return out;
 }
 
@@ -238,10 +247,10 @@ function normalizeUrlMaybe(u){
   return s;
 }
 
-/* Ping Worker */
+/* Ping Worker (on n’arrête pas si ça échoue, on tente quand même) */
 async function pingWorker(){
   try { const res = await fetch(WORKER_URL + '/ping', { method:'GET', cache:'no-store' }); return res.ok; }
-  catch { return false; }
+  catch (e) { showDebug('Ping échoué: '+(e.message||e)); return false; }
 }
 
 /* Analyse */
@@ -252,30 +261,31 @@ async function runOpenAIVision(e){
   const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
 
-  resetOut();
+  resetOut(); hideDebug();
   setStatus('Analyse OpenAI…');
   isBusy = true; runAiBtn.disabled = true;
 
   try{
-    const ok = await pingWorker();
-    if (!ok) { setStatus('CORS bloqué : vérifie le Worker URL et les en-têtes CORS.', 'warn'); return; }
+    const pingOk = await pingWorker();
+    if (!pingOk) setStatus('Ping KO, tentative quand même…');
 
-    const dataUrl = await compressImageToDataURL(file, 1200, 0.72);
+    const dataUrl = await compressImageToDataURL(file, 1000, 0.68);
 
     // garde-fou client
-    if (dataUrl.length > 7.5 * 1024 * 1024) {
-      setStatus('Image trop lourde après compression. Recadre ou fais une capture plus petite.', 'warn');
+    if (dataUrl.length > 7 * 1024 * 1024) {
+      setStatus('Image trop lourde après compression. Recadre ou réduis.', 'warn');
+      showDebug('DataURL length: ' + dataUrl.length);
       return;
     }
 
-    // Afficher aperçu (DataURL) — plus stable sur mobile
+    // Aperçu stable (toujours DataURL)
     preview.src = dataUrl;
 
     const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept':'application/json' },
       body: JSON.stringify({ imageDataUrl: dataUrl }),
-      cache: 'no-store',
+      cache: 'no-cache',
       redirect: 'follow'
     });
 
@@ -285,7 +295,9 @@ async function runOpenAIVision(e){
       try { const j = JSON.parse(txt); if (j?.error) msg = `${msg} : ${j.error} (status ${j.status || res.status})`; }
       catch { msg = `${msg} (HTTP ${res.status})`; }
       if (res.status === 413) msg = 'Image trop lourde. Réessaie après recadrage / réduction.';
-      setStatus(msg, 'warn'); return;
+      setStatus(msg, 'warn');
+      showDebug('HTTP '+res.status+'\n'+txt.slice(0,500));
+      return;
     }
 
     const j = await res.json();
@@ -306,24 +318,28 @@ async function runOpenAIVision(e){
 
     setStatus('Terminé ✔', 'ok');
   }catch(err){
-    const msg = (err && (err.message || err.name)) ? `${err.name}: ${err.message}` : 'Échec réseau (vérifie CORS/HTTPS)';
+    const msg = (err && (err.message || err.name)) ? `${err.name}: ${err.message}` : 'Échec réseau';
     setStatus('Erreur réseau : ' + msg, 'warn');
+    showDebug(String(err));
   }finally{
+    // reset état bouton
     isBusy = false; runAiBtn.disabled = false;
   }
 }
 
-/* Sélection fichier — toujours DataURL */
+/* Sélection fichier — toujours DataURL + reset fort des états (évite le bug au 2e essai) */
 fileInput.addEventListener('change', async ()=>{
   if(fileInput.files?.length){
     currentFile = fileInput.files[0];
     const durl = await readFileAsDataURL(currentFile);
     preview.src = durl;
+    hideDebug();
+    isBusy = false; runAiBtn.disabled = false;  // au cas où
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
   }
 });
 
-/* Drag & drop — convertit en DataURL aussi (pas d’ObjectURL) */
+/* Drag & drop — convertit en DataURL (pas d’ObjectURL) */
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
 drop.addEventListener('drop', async e=>{
@@ -332,9 +348,10 @@ drop.addEventListener('drop', async e=>{
     currentFile = e.dataTransfer.files[0];
     const durl = await readFileAsDataURL(currentFile);
     preview.src = durl;
+    fileInput.value = '';       // permet de re-choisir le même fichier plus tard
+    hideDebug();
+    isBusy = false; runAiBtn.disabled = false;
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
-    // IMPORTANT: netoyer l'input pour permettre de re-choisir le même fichier ensuite
-    fileInput.value = '';
   }
 });
 
@@ -342,14 +359,15 @@ drop.addEventListener('drop', async e=>{
 runAiBtn.addEventListener('click', runOpenAIVision);
 clearBtn.addEventListener('click', (e)=>{
   e.preventDefault();
-  // reset fort pour éviter le bug au 2e essai sur mobile
+  // reset fort pour que le 2e/3e essai marche aussi sur mobile
   fileInput.value=''; currentFile=null;
   preview.removeAttribute('src');
-  resetOut();
+  resetOut(); hideDebug();
+  isBusy = false; runAiBtn.disabled = false;
   setStatus('Prêt.');
 });
 
-/* Générateur M3U */
+/* ---------- Générateur M3U (inchangé) ---------- */
 (function(){
   const $id = (id) => document.getElementById(id);
   const status = $id('m3uStatus'), nameInput = $id('playlistName'), durationSel = $id('duration'), urlInput = $id('m3uInput'), out = $id('output');
@@ -419,7 +437,10 @@ clearBtn.addEventListener('click', (e)=>{
 
   function copyFromSelector(sel){
     const el = document.querySelector(sel); if(!el) return;
-    copyPlain(el.value||'', () => { const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900); });
+    copyPlain(el.value||'', () => {
+      const old = status.textContent; status.textContent = 'Copié !';
+      setTimeout(()=> status.textContent = old || '', 900);
+    });
   }
 
   function clearAll(){ urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; }
@@ -436,3 +457,4 @@ clearBtn.addEventListener('click', (e)=>{
 </script>
 </body>
 </html>
+
