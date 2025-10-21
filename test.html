@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Générateur de Template M3U</title>
+  <meta name="description" content="Collez un lien M3U et obtenez un template prêt à copier avec un bouton Copier." />
+  <style>
+    :root { --bg:#0f1115; --card:#161a23; --text:#e9eef5; --muted:#9aa3b2; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); }
+    .container { max-width: 900px; margin: 40px auto; padding: 24px; }
+    .card { background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); padding: 20px; }
+    h1 { margin: 0 0 10px; font-size: 28px; }
+    p.lead { margin: 0 0 20px; color: var(--muted); }
+    label { display:block; font-weight:600; margin: 16px 0 8px; }
+    .row { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 720px) { .row { grid-template-columns: 1fr 1fr; } }
+    input[type="text"], textarea, input[type="url"], input[type="file"], select {
+      width: 100%; background: #0e1118; color: var(--text); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 12px 14px; font-size: 15px; outline: none; transition: border-color .2s;
+    }
+    textarea { min-height: 200px; resize: vertical; }
+    input[readonly], textarea[readonly] { opacity: .95; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top: 14px; }
+    button { cursor:pointer; border: 0; border-radius: 12px; padding: 10px 14px; font-weight:600; color: white; background: var(--accent);
+             transition: transform .02s ease-in-out, filter .15s; }
+    button:active { transform: translateY(1px); }
+    button.secondary { background: #303649; }
+    .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .status { margin-left:auto; font-size: 13px; color: var(--muted); }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .footer { margin-top: 22px; font-size: 12px; color: var(--muted); text-align:center; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    /* Extras under template */
+    .extras { margin-top: 18px; display: grid; gap: 12px; }
+    .extras .row2 { display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center; }
+    .extras .title { font-weight:600; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom: 8px;">
+        <h1>Générateur de Template M3U</h1>
+        <span id="status" class="status">En attente d'un lien…</span>
+      </div>
+      <p class="lead">Collez un <strong>seul</strong> lien M3U et générez un <strong>unique</strong> template. Boutons : Générer, Copier, Effacer.</p>
+
+      <label for="playlistName">Nom de la playlist</label>
+      <input type="text" id="playlistName" placeholder="Ex. Digistore" value="Digistore" />
+
+      <label for="duration">Durée de test</label>
+      <select id="duration">
+        <option>1H</option>
+        <option>2H</option>
+        <option>3H</option>
+        <option>6H</option>
+        <option selected>12H</option>
+        <option>24H</option>
+      </select>
+
+      <label for="m3u">Lien M3U</label>
+      <input type="url" id="m3u" placeholder="Collez ici le lien M3U complet (http/https)…" inputmode="url" autocomplete="off" spellcheck="false"/>
+
+      <div class="btns">
+        <button id="generateBtn">Générer</button>
+        <button id="copyBtn">Copier</button>
+        <button id="clearBtn" class="secondary">Effacer</button>
+      </div>
+
+      <label for="output" style="margin-top:18px;">Template généré</label>
+      <textarea id="output" readonly placeholder="Le template apparaîtra ici…"></textarea>
+
+      <!-- EXTRAS: copy-only fields -->
+      <div class="extras">
+        <div class="title">Copie rapide (valeurs seules)</div>
+
+        <div class="row2">
+          <input id="x_m3u" type="text" readonly placeholder="Lien M3U (brut)" />
+          <button data-copy="#x_m3u">Copier M3U</button>
+        </div>
+
+        <div class="row2">
+          <input id="x_user" type="text" readonly placeholder="Username" />
+          <button data-copy="#x_user">Copier Username</button>
+        </div>
+
+        <div class="row2">
+          <input id="x_pass" type="text" readonly placeholder="Password" />
+          <button data-copy="#x_pass">Copier Password</button>
+        </div>
+
+        <div class="row2">
+          <input id="x_url" type="text" readonly placeholder="URL (avec port s'il existe)" />
+          <button data-copy="#x_url">Copier URL</button>
+        </div>
+
+        <div class="row2">
+          <input id="x_combo" type="text" readonly placeholder="Username : X / Password : Y / URL : http://..." />
+          <button data-copy="#x_combo">Copier la ligne</button>
+        </div>
+      </div>
+
+      <!-- OCR: extract URL / MAC / DEVICE ID / Device Key from image -->
+      <div class="extras" style="margin-top:28px;">
+        <div class="title">Extraire depuis une image (OCR)</div>
+
+        <div class="row2">
+          <input id="imgInputText" type="url" placeholder="URL de l'image (optionnel)" />
+          <button id="loadImgUrlBtn">Charger</button>
+        </div>
+
+        <div class="row2">
+          <input type="file" id="imgFile" accept="image/*" />
+          <button id="ocrBtn">Analyser l'image</button>
+        </div>
+
+        <div id="ocrStatus" class="hint">Choisissez un fichier image ou entrez une URL, puis cliquez sur « Analyser l'image ».</div>
+
+        <div id="imgPreviewWrap" style="display:none; margin-top:10px;">
+          <img id="imgPreview" alt="aperçu" style="max-width:100%; border-radius:12px; border:1px solid rgba(255,255,255,0.08);" />
+        </div>
+
+        <div class="title" style="margin-top:14px;">Résultats détectés</div>
+
+        <div class="row2">
+          <input id="ocr_url" type="text" readonly placeholder="URL (si applicable)" />
+          <button data-copy="#ocr_url">Copier URL</button>
+        </div>
+        <div class="row2">
+          <input id="ocr_mac" type="text" readonly placeholder="MAC (format XX:XX:XX:XX)" />
+          <button data-copy="#ocr_mac">Copier MAC</button>
+        </div>
+        <div class="row2">
+          <input id="ocr_devid" type="text" readonly placeholder="DEVICE ID (format XX:XX:XX:XX)" />
+          <button data-copy="#ocr_devid">Copier DEVICE ID</button>
+        </div>
+        <div class="row2">
+          <input id="ocr_devkey" type="text" readonly placeholder="Device Key" />
+          <button data-copy="#ocr_devkey">Copier Device Key</button>
+        </div>
+      </div>
+
+      <div class="footer">⚠️ Cette page formate uniquement vos informations. Elle ne vérifie pas la validité d’un abonnement.</div>
+    </div>
+  </div>
+
+<script>
+// Version simple : 1 URL → 1 template. Trois boutons: Générer / Copier / Effacer + OCR
+(function(){
+  function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  onReady(function(){
+    const $ = (id) => document.getElementById(id);
+    const status = $('status');
+    const nameInput = $('playlistName');
+    const durationSel = $('duration');
+    const urlInput = $('m3u');
+    const out = $('output');
+
+    // extras fields
+    const f_m3u = $('x_m3u');
+    const f_user = $('x_user');
+    const f_pass = $('x_pass');
+    const f_url  = $('x_url');
+    const f_combo = $('x_combo');
+
+    function extract(u){
+      const res = {username:'', password:'', origin:'', raw:''};
+      try{
+        const url = new URL(u);
+        // Conserver exactement hôte + port tels qu’écrits dans l’URL d’origine
+        const m = /^([a-z]+:\/\/)([^\/]+)/i.exec(u);
+        const proto = url.protocol || (m ? m[1] : 'http://');
+        const hostPort = m ? m[2] : url.host; // inclut le port s'il est écrit
+        res.origin = proto + hostPort;
+        res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
+        res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
+        res.raw = u;
+      }catch(e){/* ignore */}
+      return res;
+    }
+
+    function build(){
+      const link = (urlInput.value||'').trim();
+      if(!link){
+        status.textContent = "Aucun lien M3U fourni.";
+        out.value=''; 
+        fillExtras(null); 
+        return;
+      }
+      const {username, password, origin, raw} = extract(link);
+      const name = (nameInput.value||'Digistore').trim();
+      const duration = (durationSel?.value || '12H');
+      if(!origin || !username || !password){
+        out.value = `Veuillez fournir un lien M3U valide avec \"username\" et \"password\".\n\nExemple :\nhttp://serveur:80/get.php?username=USER&password=PASS&type=m3u_plus&output=ts`;
+        status.innerHTML = '<span class="warn">Lien invalide</span>';
+        fillExtras(null);
+        return;
+      }
+      const nameLine = name ? `Nom de la playlist : ${name}\n` : '';
+      out.value = `⚠️ TEST ${duration} ⚠️\n\n`+
+                  `➡️ Code :\n`+
+                  `${nameLine}`+
+                  `Nom d’utilisateur : ${username}\n`+
+                  `Mot de passe : ${password}\n`+
+                  `URL du serveur : ${origin} \n\n`+
+                  `➡️ Lien M3U :\n`+
+                  `${raw}`;
+      status.innerHTML = '<span class="ok">Template prêt ✔</span>';
+      fillExtras({raw, username, password, origin});
+    }
+
+    function fillExtras(data){
+      if(!data){
+        f_m3u.value = f_user.value = f_pass.value = f_url.value = f_combo.value = '';
+        return;
+      }
+      f_m3u.value = data.raw || '';
+      f_user.value = data.username || '';
+      f_pass.value = data.password || '';
+      f_url.value  = data.origin || '';
+      f_combo.value = `Username : ${data.username} / Password : ${data.password} / URL : ${data.origin}`;
+    }
+
+    function copyPlain(text, onDone){
+      if(!text) return;
+      const done = () => { if(onDone) onDone(); };
+      if(navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+      } else { fallback(); }
+      function fallback(){
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); }catch(e){}
+        document.body.removeChild(ta);
+        done();
+      }
+    }
+
+    function copyFromSelector(sel){
+      const el = document.querySelector(sel);
+      if(!el) return;
+      copyPlain(el.value||'', () => {
+        const old = status.textContent; status.textContent = 'Copié !';
+        setTimeout(()=> status.textContent = old || '', 900);
+      });
+    }
+
+    function clearAll(){ 
+      urlInput.value=''; 
+      out.value=''; 
+      fillExtras(null);
+      status.textContent="En attente d'un lien…"; 
+    }
+
+    $('generateBtn').addEventListener('click', build);
+    $('copyBtn').addEventListener('click', ()=> copyPlain(out.value||'', () => {
+      const old = status.textContent; status.textContent = 'Copié !';
+      setTimeout(()=> status.textContent = old || '', 900);
+    }));
+    $('clearBtn').addEventListener('click', clearAll);
+
+    // Delegate copy buttons (including OCR fields)
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-copy]');
+      if(!btn) return;
+      const sel = btn.getAttribute('data-copy');
+      copyFromSelector(sel);
+    });
+
+    urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
+    urlInput.addEventListener('paste', ()=>{ setTimeout(build, 0); });
+
+    /* =======================
+       OCR: URL / MAC / DEVICE ID / Device Key
+       ======================= */
+    const ocrStatus = document.getElementById('ocrStatus');
+    const imgFile = document.getElementById('imgFile');
+    const imgInputText = document.getElementById('imgInputText');
+    const imgPreview = document.getElementById('imgPreview');
+    const imgPreviewWrap = document.getElementById('imgPreviewWrap');
+    const ocrBtn = document.getElementById('ocrBtn');
+    const loadImgUrlBtn = document.getElementById('loadImgUrlBtn');
+
+    const o_url   = document.getElementById('ocr_url');
+    const o_mac   = document.getElementById('ocr_mac');
+    const o_devid = document.getElementById('ocr_devid');
+    const o_key   = document.getElementById('ocr_devkey');
+
+    function setOcrStatus(msg){ if(ocrStatus) ocrStatus.textContent = msg; }
+    function clearOcrOutputs(){ if(o_url){o_url.value='';} if(o_mac){o_mac.value='';} if(o_devid){o_devid.value='';} if(o_key){o_key.value='';} }
+
+    function pickFirst(re){ return (txt)=>{ const m = txt.match(re); return m ? m[0] : ''; }; }
+    const pickUrl   = pickFirst(/https?:\/\/[^\s)]+/i);
+    const pickMac4  = pickFirst(/\b[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}:[0-9A-F]{2}\b/i); // 4 paires
+    const pickDevId = pickMac4; // même format souhaité
+
+    function pickDevKey(txt){
+      const m1 = txt.match(/device\s*key\s*[:=]\s*([A-Za-z0-9._\-]{6,})/i);
+      if(m1) return m1[1];
+      const m2 = txt.match(/\bkey\b\s*[:=]\s*([A-Za-z0-9._\-]{6,})/i);
+      if(m2) return m2[1];
+      const m3 = txt.match(/\b[0-9A-F]{16,}\b/i);
+      return m3 ? m3[0] : '';
+    }
+
+    function loadImageFromUrl(){
+      const u = (imgInputText?.value||'').trim();
+      if(!u){ setOcrStatus("Veuillez saisir une URL d'image."); return; }
+      if(imgPreview){ imgPreview.src = u; }
+      if(imgPreviewWrap){ imgPreviewWrap.style.display = 'block'; }
+      setOcrStatus("Image chargée depuis l'URL. Prête pour analyse.");
+    }
+
+    async function runOcr(){
+      try{
+        clearOcrOutputs();
+        let src = '';
+        if(imgFile?.files && imgFile.files[0])      src = URL.createObjectURL(imgFile.files[0]);
+        else if((imgInputText?.value||'').trim())   src = imgInputText.value.trim();
+        else if(imgPreview?.src)                    src = imgPreview.src;
+
+        if(!src){ setOcrStatus('Aucune image fournie.'); return; }
+        if(imgPreview){ imgPreview.src = src; }
+        if(imgPreviewWrap){ imgPreviewWrap.style.display='block'; }
+        setOcrStatus('Analyse en cours…');
+
+        const res = await Tesseract.recognize(src, 'eng+fra', { logger:()=>{} });
+        const text = (res && res.data && res.data.text) ? res.data.text : '';
+        if(!text.trim()){ setOcrStatus('Aucun texte détecté.'); return; }
+
+        const norm = text.replace(/[\u2010-\u2015]/g,'-'); // normaliser tirets
+        if(o_url)   o_url.value   = pickUrl(norm);
+        if(o_mac)   o_mac.value   = pickMac4(norm);
+        if(o_devid) o_devid.value = pickDevId(norm);
+        if(o_key)   o_key.value   = pickDevKey(norm);
+
+        setOcrStatus('Analyse terminée. Modifiez si besoin puis utilisez les boutons Copier.');
+      }catch(e){
+        console.error(e);
+        setOcrStatus("Erreur pendant l'OCR. Vérifiez l'image ou réessayez.");
+      }
+    }
+
+    if(loadImgUrlBtn) loadImgUrlBtn.addEventListener('click', loadImageFromUrl);
+    if(ocrBtn) ocrBtn.addEventListener('click', runOcr);
+    if(imgFile) imgFile.addEventListener('change', ()=>{
+      if(imgFile.files && imgFile.files[0]){
+        if(imgPreview) imgPreview.src = URL.createObjectURL(imgFile.files[0]);
+        if(imgPreviewWrap) imgPreviewWrap.style.display='block';
+        setOcrStatus("Fichier chargé. Cliquez « Analyser l'image ».");
+      }
+    });
+  });
+})();
+</script>
+
+<!-- OCR engine (must be after the main script) -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</body>
+</html>
