@@ -18,7 +18,7 @@
       color:#fff;padding:10px 14px;border-radius:12px;font-weight:600
     }
     .tabbtn.active{background:var(--accent)}
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.35)}
     h1{margin:0 0 6px}
     p.lead{margin:0 0 14px;color:var(--muted)}
     .muted{color:var(--muted);font-size:13px}
@@ -28,14 +28,14 @@
     button.secondary{background:#2a3144}
     .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 
-    /* Extractor */
+    /* Extracteur */
     .drop{
       position:relative;
       border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;
       text-align:center;cursor:pointer; user-select:none;
     }
     .drop.drag{border-color:var(--accent);background:#0e1320}
-    /* Input fichier en overlay (invisible mais cliquable sur mobile/desktop) */
+    /* Input fichier en overlay pour mobile/desktop */
     .drop input[type="file"]{
       position:absolute; inset:0; width:100%; height:100%;
       opacity:0; cursor:pointer;
@@ -90,7 +90,6 @@
     <label class="muted">Image</label>
     <div id="drop" class="drop" aria-label="Sélecteur d'image">
       <div> Touchez / cliquez pour choisir (galerie/fichiers) ou faites glisser une image ici </div>
-      <!-- IMPORTANT : pas de capture par défaut -> choix Galerie/Fichiers -->
       <input id="file" type="file" accept="image/*" aria-label="Choisir une image">
     </div>
     <div class="pick-row">
@@ -209,8 +208,8 @@ tabs.forEach(btn=>{
   });
 });
 
-/* ---------- Extracteur (OpenAI via Worker, compatible mobile) ---------- */
-const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // <-- remplace par TON URL (https://)
+/* ---------- Extracteur (OpenAI via Worker) ---------- */
+const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← ton URL, sans slash final
 
 const $ = (s)=> document.querySelector(s);
 const statusEl = $('#status');
@@ -234,9 +233,9 @@ let isBusy = false;
 /* Caméra ON/OFF (galerie par défaut) */
 toggleCamera.addEventListener('change', ()=>{
   if(toggleCamera.checked){
-    fileInput.setAttribute('capture','environment'); // force appareil photo
+    fileInput.setAttribute('capture','environment'); // appareil photo
   }else{
-    fileInput.removeAttribute('capture'); // permet la Galerie/Fichiers
+    fileInput.removeAttribute('capture'); // Galerie / Fichiers
   }
 });
 
@@ -273,9 +272,10 @@ function readFileAsDataURL(file){
   });
 }
 
-/* Compression image (max 1600px, JPEG 0.8) */
-async function compressImageToDataURL(file, maxSize=1600, quality=0.8){
+/* Compression image (max 1200px, JPEG 0.72) — réduit les erreurs réseau sur mobile */
+async function compressImageToDataURL(file, maxSize=1200, quality=0.72){
   const dataUrl = await readFileAsDataURL(file);
+
   const img = new Image();
   img.decoding = 'async';
   img.src = dataUrl;
@@ -283,19 +283,28 @@ async function compressImageToDataURL(file, maxSize=1600, quality=0.8){
 
   const width = img.naturalWidth || img.width;
   const height = img.naturalHeight || img.height;
-  const scale = Math.min(1, maxSize / Math.max(width, height));
-  if (scale === 1) return dataUrl;
 
+  if (Math.max(width, height) <= maxSize && dataUrl.length < 3.5 * 1024 * 1024) {
+    return dataUrl;
+  }
+
+  const scale = Math.min(1, maxSize / Math.max(width, height));
   const w = Math.round(width * scale);
   const h = Math.round(height * scale);
+
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL('image/jpeg', quality);
+
+  let out = canvas.toDataURL('image/jpeg', quality);
+  if (out.length > 3.8 * 1024 * 1024) {
+    out = canvas.toDataURL('image/jpeg', 0.6);
+  }
+  return out;
 }
 
-/* Normaliser une URL éventuelle */
+/* Normaliser URL */
 function normalizeUrlMaybe(u){
   if(!u) return '';
   const s = String(u).trim();
@@ -304,7 +313,7 @@ function normalizeUrlMaybe(u){
   return s;
 }
 
-/* Ping Worker (vérif CORS) */
+/* Ping Worker (CORS check) */
 async function pingWorker(){
   try {
     const res = await fetch(WORKER_URL + '/ping', { method:'GET' });
@@ -335,8 +344,14 @@ async function runOpenAIVision(e){
       return;
     }
 
-    // 2) compresser l'image
-    const dataUrl = await compressImageToDataURL(file, 1600, 0.8);
+    // 2) compresser
+    const dataUrl = await compressImageToDataURL(file, 1200, 0.72);
+
+    // garde-fou côté client (~7.5 Mo)
+    if (dataUrl.length > 7.5 * 1024 * 1024) {
+      setStatus('Image trop lourde après compression. Recadre ou fais une capture plus petite.', 'warn');
+      return;
+    }
 
     // 3) POST vers Worker
     const res = await fetch(WORKER_URL, {
@@ -390,12 +405,12 @@ async function runOpenAIVision(e){
   }
 }
 
-/* Sélection fichier (garde une ref pour iOS/Android) */
+/* Sélection fichier (mobile/desktop) */
 fileInput.addEventListener('change', async ()=>{
   if(fileInput.files?.length){
     currentFile = fileInput.files[0];
     const durl = await readFileAsDataURL(currentFile);
-    preview.src = durl; // DataURL persistant
+    preview.src = durl;
     setStatus('Image chargée. Cliquez “Analyser avec OpenAI (proxy)”.');
   }
 });
