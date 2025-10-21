@@ -454,6 +454,39 @@ clearBtn.addEventListener('click', (e)=>{
   urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
   urlInput.addEventListener('paste', ()=>{ setTimeout(build, 0); });
 })();
+
+/* ---------- Smart Reset pour Mobile (Fix BFCache) ---------- */
+window.addEventListener('pageshow', (event) => {
+  // 'persisted' est true quand la page est restaurée depuis le cache (BFCache)
+  if (event.persisted) {
+    console.log('Page restaurée depuis BFCache, réinitialisation de l\'état...');
+    
+    // On force la réinitialisation de l'état "busy"
+    isBusy = false;
+    
+    // On réactive le bouton au cas où il serait bloqué
+    const runAiBtn = document.querySelector('#runAi');
+    if (runAiBtn) {
+      runAiBtn.disabled = false;
+    }
+    
+    // On réinitialise le statut (optionnel, mais propre)
+    const statusEl = document.querySelector('#status');
+    if (statusEl) {
+      statusEl.className = 'status';
+      statusEl.textContent = 'Prêt.';
+    }
+    
+    // On cache le debug au cas où
+    const debugWrap = document.querySelector('#debugWrap');
+    if (debugWrap) {
+      debugWrap.style.display = 'none';
+      debugWrap.textContent = '';
+    }
+  }
+  
+});  
+  
 </script>
 </body>
 </html>
