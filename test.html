@@ -8,7 +8,7 @@
   <style>
     :root { --bg:#0f1115; --card:#161a23; --text:#e9eef5; --muted:#9aa3b2; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Inter,Helvetica,Arial;background:var(--bg);color:var(--text)}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Helvetica,Arial;background:var(--bg);color:var(--text)}
     .container{max-width:980px;margin:32px auto;padding:16px}
     .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
     h1{margin:0 0 6px}
@@ -26,14 +26,13 @@
     img#preview{max-width:100%;border-radius:10px}
     .copybtn{margin-left:8px;padding:6px 10px;font-size:12px;border-radius:8px}
   </style>
-  <!-- Tesseract.js (WebAssembly OCR, runs locally) -->
   <script src="https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="container">
   <div class="card">
     <h1>Extraction depuis capture d’écran IPTV</h1>
-    <p class="lead">Charge une image (JPG/PNG) d’écran d’une app (iboproapp / shamel / ibsmarterplayer, etc.) et récupère automatiquement : <b>Site</b>, <b>Adresse MAC</b>, <b>Clé de l’appareil</b>, <b>Device ID</b> (si présent).</p>
+    <p class="lead">Téléversez l’image → obtenez <b>Site</b>, <b>MAC</b>, <b>Device Key</b>, <b>Device ID</b>. Si l’image est floue, utilisez le bouton <b>OpenAI</b>.</p>
 
     <div class="row">
       <div>
@@ -43,8 +42,9 @@
           <input id="file" type="file" accept="image/*" hidden>
         </div>
         <div style="margin-top:10px"><img id="preview" alt=""></div>
-        <div style="margin-top:12px;display:flex;gap:8px">
-          <button id="run">Extraire</button>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button id="run">Extraire (local)</button>
+          <button id="runAi" class="secondary">OpenAI (proxy)</button>
           <button id="clear" class="secondary">Effacer</button>
           <span id="status" class="muted">Prêt.</span>
         </div>
@@ -68,17 +68,19 @@
           <div>Device ID</div>
           <div><span id="did" class="value"></span><button class="copybtn secondary" data-copy="#did">Copier</button></div>
 
-          <div>Texte OCR (debug)</div>
+          <div>Texte (debug)</div>
           <div><textarea id="raw" class="value" style="height:160px"></textarea></div>
         </div>
       </div>
     </div>
 
-    <p class="muted" style="margin-top:14px">Tout se passe <b>localement</b> dans votre navigateur. Aucun envoi vers un serveur.</p>
+    <p class="muted" style="margin-top:14px">Tout se passe <b>localement</b> (OpenAI uniquement via votre proxy Cloudflare).</p>
   </div>
 </div>
 
 <script>
+const WORKER_URL = 'throbbing-voice-52a9.restless-cell-d69c.workers.dev'; // ← remplacez ICI
+
 const el = (sel)=> document.querySelector(sel);
 const statusEl = el('#status');
 const siteEl = el('#site'), macEl = el('#mac'), macPlainEl = el('#macplain');
@@ -99,7 +101,6 @@ document.addEventListener('click', e=>{
 function resetOut(){
   siteEl.textContent = macEl.textContent = macPlainEl.textContent = dkeyEl.textContent = didEl.textContent = rawEl.value = '';
 }
-
 function readFile(file){
   return new Promise((resolve,reject)=>{
     const fr = new FileReader();
@@ -109,64 +110,97 @@ function readFile(file){
   });
 }
 
+function extractSiteFrom(text){
+  let t = text
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s*:\s*\/\s*\/\s*/g, '://')  // https : // → https://
+    .replace(/\s*\.\s*/g, '.')             // iboproapp . com → iboproapp.com
+    .replace(/\s*\/\s*/g, '/');            // / path → /path
+
+  const m1 = t.match(/\bhttps?:\/\/[a-z0-9.-]+(?:\/[^\s]*)?/i);
+  if (m1) return m1[0];
+  const m2 = t.match(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?/i);
+  if (m2) return 'https://' + m2[0].replace(/^https?:\/\//i,'');
+  return '';
+}
+
 async function runOCR(){
   resetOut();
   const file = fileInput.files?.[0];
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
   preview.src = URL.createObjectURL(file);
 
-  setStatus('OCR en cours… (~5–10s la première fois)');
-  const { data } = await Tesseract.recognize(file, 'eng+fra', {
-    logger: m => { /* console.log(m); */ }
-  });
+  setStatus('OCR en cours…');
+  const { data } = await Tesseract.recognize(file, 'eng+fra');
   const text = (data && data.text || '').replace(/\s+/g,' ').trim();
   rawEl.value = text;
-  setStatus('Texte détecté. Extraction…');
+  setStatus('Extraction…');
 
-  // ---- Extraction heuristics ----
-  // URL
-  const urlMatch = text.match(/\bhttps?:\/\/[a-z0-9._\-\/]+/i);
-  siteEl.textContent = urlMatch ? urlMatch[0] : '';
+  const site = extractSiteFrom(text);
+  siteEl.textContent = site;
 
-  // MAC (accepts hex pairs with : or - ; allow a–f / 0–9, sometimes OCR confuses O/0 or l/1)
-  // First, normalize common OCR confusions
-  const norm = text
-    .replace(/O/g,'0')
-    .replace(/l/g,'1')
-    .replace(/I/g,'1')
-    .replace(/—|–/g,'-');
-
+  const norm = text.replace(/O/g,'0').replace(/l|I/g,'1').replace(/—|–/g,'-');
   const macMatch = norm.match(/\b([0-9a-fA-F]{2}[:\-]){5}[0-9a-fA-F]{2}\b/);
   const mac = macMatch ? macMatch[0].replace(/-/g,':').toLowerCase() : '';
   macEl.textContent = mac;
   macPlainEl.textContent = mac ? mac.replace(/:/g,'').toUpperCase() : '';
 
-  // Device Key (usually 5–7 digits)
   const keyMatch = norm.match(/\b(?:clé\s*(?:de|l’|l')\s*(?:appareil|device)\s*[:\-]?\s*)?(\d{5,7})\b/i);
   dkeyEl.textContent = keyMatch ? keyMatch[1] : '';
 
-  // Device ID (patterns seen: "ID. 00 1A 79 B7 1C 2D" or a 12-16 hex group possibly spaced)
-  //  - Look for something after "ID" or "Device ID"
   let id = '';
   const idLabel = norm.match(/\b(?:device\s*id|id\.)[:\s]*([0-9a-fA-F\s]{12,})/i);
   if(idLabel){
-    // keep only hex + spaces and collapse to pairs
     const onlyHex = idLabel[1].replace(/[^0-9a-fA-F\s]/g,' ').trim();
-    // examples like "00 1A 79 B7 1C 2D" → keep with spaces AND provide compact
     const pairs = onlyHex.split(/\s+/).filter(x=>/^[0-9a-fA-F]{2}$/.test(x));
     if(pairs.length >= 6) id = pairs.join(' ').toUpperCase();
   } else {
-    // fallback: a long hex run suggestive of ID without separators
     const compact = norm.match(/\b[0-9a-fA-F]{12,}\b/);
     if(compact) id = compact[0].toUpperCase();
   }
   didEl.textContent = id;
 
-  if(!urlMatch && !mac && !keyMatch && !id){ setStatus('Rien trouvé. Essayez une image plus nette (plein écran, sans reflet).', 'warn'); }
-  else { setStatus('Extraction terminée ✔', 'ok'); }
+  if(!site && !mac && !keyMatch && !id){ setStatus('Rien trouvé. Essayez une image plus nette.', 'warn'); }
+  else { setStatus('Terminé ✔','ok'); }
 }
 
-// UI events
+async function runOpenAIVision(){
+  resetOut();
+  const file = fileInput.files?.[0];
+  if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
+  preview.src = URL.createObjectURL(file);
+
+  setStatus('Analyse OpenAI…');
+  const b64 = await readFile(file); // data URL
+  const res = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageDataUrl: b64 })
+  });
+
+  if(!res.ok){
+    setStatus('Erreur OpenAI/Proxy', 'warn');
+    rawEl.value = await res.text();
+    return;
+  }
+
+  const j = await res.json();
+  siteEl.textContent = j.site || '';
+  const mac = (j.mac || '').toLowerCase();
+  macEl.textContent = mac;
+  macPlainEl.textContent = mac ? mac.replace(/:/g,'').toUpperCase() : '';
+  dkeyEl.textContent = j.device_key || '';
+  didEl.textContent  = j.device_id || '';
+  rawEl.value = JSON.stringify(j, null, 2);
+
+  if(!siteEl.textContent){
+    // fallback: try to guess from JSON text
+    siteEl.textContent = extractSiteFrom(rawEl.value);
+  }
+  setStatus('Terminé (OpenAI) ✔','ok');
+}
+
+// UI
 drop.addEventListener('click', ()=> fileInput.click());
 drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
 drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
@@ -177,10 +211,12 @@ drop.addEventListener('drop', async e=>{
 fileInput.addEventListener('change', async ()=>{
   if(fileInput.files?.[0]) preview.src = await readFile(fileInput.files[0]);
 });
-el('#run').addEventListener('click', runOCR);
-el('#clear').addEventListener('click', ()=>{
+document.querySelector('#run').addEventListener('click', runOCR);
+document.querySelector('#runAi').addEventListener('click', runOpenAIVision);
+document.querySelector('#clear').addEventListener('click', ()=>{
   fileInput.value=''; preview.removeAttribute('src'); resetOut(); setStatus('Prêt.');
 });
 </script>
 </body>
 </html>
+
