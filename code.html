@@ -20,13 +20,13 @@
     .hide{display:none !important}
     .card{border:1px solid var(--muted);border-radius:12px;padding:14px;margin-top:14px}
     .title{font-weight:700;margin-bottom:8px}
-    .kv{display:flex;gap:8px;align-items:center;margin:6px 0}
-    .kv code{flex:1;background:#0b0d12;padding:10px;border-radius:8px;overflow:auto}
     .small{font-size:12px;opacity:.8}
     .ok{background:#0f1f14;color:#c9ffdf;border:1px solid #1f3a28;padding:12px;border-radius:10px;margin-top:12px}
     .error{background:#2b1212;color:#ffd7d7;border:1px solid #442222;padding:12px;border-radius:10px;margin-top:12px;white-space:pre-wrap}
     .section-heading{margin-top:18px;margin-bottom:6px;font-weight:700}
-    .btn-copy{white-space:nowrap;flex:0 0 auto;padding:10px 12px;margin:0}
+    pre{margin:8px 0 0; background:#0b0d12; border:1px solid var(--muted); border-radius:8px; padding:10px; overflow:auto}
+    code{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .kv{margin-top:8px}
   </style>
 </head>
 <body>
@@ -96,49 +96,30 @@
       result.innerHTML = `<div class="error"><strong>Error:</strong> ${msg}${details ? `\n${details}` : ""}</div>`;
     }
 
-    async function copy(text, btn) {
-      try {
-        await navigator.clipboard.writeText(text);
-        const old = btn.textContent;
-        btn.textContent = "Copied!";
-        setTimeout(()=>btn.textContent = old, 1200);
-      } catch {
-        alert("Copy failed. Long-press to copy manually.");
-      }
-    }
-
-    function safeUrlOrigin(u) {
-      try { return new URL(u).origin; } catch { return ""; }
-    }
+    function safeUrlOrigin(u) { try { return new URL(u).origin; } catch { return ""; } }
 
     function renderM3U(username, password, url) {
       const origin = safeUrlOrigin(url);
-      const m3uLink = url || "";
       return `
         <div class="ok"><strong>Trial created successfully.</strong></div>
 
         <div class="section-heading">M3U</div>
         <div class="card">
-          <div class="kv">
-            <code id="m3u_full">${m3uLink}</code>
-            <button class="btn-copy" data-copy="#m3u_full">Copy</button>
+          <div class="kv"><div class="title">M3U Link</div>
+            <pre><code>${url || "-"}</code></pre>
           </div>
-          <div class="small">Use this link directly in players like IPTV Smarters, VLC, etc.</div>
         </div>
 
         <div class="section-heading">Xtream API</div>
         <div class="card">
-          <div class="kv">
-            <code id="xt_url">${origin}</code>
-            <button class="btn-copy" data-copy="#xt_url">Copy</button>
+          <div class="kv"><div class="title">URL</div>
+            <pre><code>${origin || "-"}</code></pre>
           </div>
-          <div class="kv">
-            <code id="xt_user">${username || ""}</code>
-            <button class="btn-copy" data-copy="#xt_user">Copy</button>
+          <div class="kv"><div class="title">Username</div>
+            <pre><code>${username || "-"}</code></pre>
           </div>
-          <div class="kv">
-            <code id="xt_pass">${password || ""}</code>
-            <button class="btn-copy" data-copy="#xt_pass">Copy</button>
+          <div class="kv"><div class="title">Password</div>
+            <pre><code>${password || "-"}</code></pre>
           </div>
           <div class="small">Use these in Xtream-compatible apps (e.g., Smarters: Login with Xtream Codes).</div>
         </div>
@@ -151,36 +132,23 @@
 
         <div class="section-heading">MAG Device</div>
         <div class="card">
-          <div class="kv">
-            <code id="mag_mac">${mac || ""}</code>
-            <button class="btn-copy" data-copy="#mag_mac">Copy</button>
+          <div class="kv"><div class="title">MAC</div>
+            <pre><code>${mac || "-"}</code></pre>
           </div>
-          <div class="kv">
-            <code id="mag_portal">${portalUrl || ""}</code>
-            <button class="btn-copy" data-copy="#mag_portal">Copy</button>
+          <div class="kv"><div class="title">Portal URL</div>
+            <pre><code>${portalUrl || "-"}</code></pre>
           </div>
           <div class="small">Enter the Portal URL in your MAG device settings, with your MAC address.</div>
         </div>
       `;
     }
 
-    // Delegate copy buttons
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.btn-copy');
-      if (!btn) return;
-      const sel = btn.getAttribute('data-copy');
-      const el = document.querySelector(sel);
-      if (el) copy(el.textContent.trim(), btn);
-    });
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       result.innerHTML = "";
       const email = form.elements['email'].value.trim();
-      if (!email) { renderError('Email is required'); return; }
-      if ((parseInt(typeSel.value,10) === 2) && !macInput.value.trim()) {
-        renderError('MAC is required for MAG'); return;
-      }
+      if (!email) return renderError('Email is required');
+      if ((parseInt(typeSel.value,10) === 2) && !macInput.value.trim()) return renderError('MAC is required for MAG');
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Working…";
@@ -210,14 +178,10 @@
           return;
         }
 
-        // If M3U (type=1), we expect url, username, password in response.
-        const isM3U = (body.type === 1);
-        if (isM3U) {
+        if (body.type === 1) {
           const url = data.url || "";
           let username = data.username || "";
           let password = data.password || "";
-
-          // If worker only returned url, extract username/password from it
           if ((!username || !password) && url) {
             try {
               const u = new URL(url);
@@ -225,11 +189,9 @@
               password = password || u.searchParams.get("password") || "";
             } catch {}
           }
-
           result.innerHTML = renderM3U(username, password, url);
         } else {
-          // MAG
-          const mac = data.username || ""; // worker maps mac to username field for MAG
+          const mac = data.username || "";
           const portal = data.url || "";
           result.innerHTML = renderMAG(mac, portal);
         }
@@ -244,3 +206,4 @@
   </script>
 </body>
 </html>
+
