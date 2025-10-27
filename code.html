@@ -66,6 +66,11 @@
         <div class="hint">Format: XX:XX:XX:XX:XX:XX</div>
       </div>
 
+      <!-- NEW: Optional Package ID for testing -->
+      <label>Package ID (optional for testing)</label>
+      <input name="pkg" placeholder="e.g. 123">
+      <div class="hint">Leave empty to use the default package configured in the Worker.</div>
+
       <button id="submitBtn" type="submit">Create Trial</button>
     </form>
 
@@ -73,7 +78,7 @@
   </div>
 
   <script>
-    const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev"; // your Worker URL
+    const WORKER_URL = "https://YOUR-WORKER.SUBDOMAIN.workers.dev"; // ← replace with your Worker URL
 
     const form = document.getElementById('trialForm');
     const result = document.getElementById('result');
@@ -163,6 +168,12 @@
       };
       if (body.type === 2) { body.mac = macInput.value.trim(); }
 
+      // NEW: if Package ID provided, send it (Worker will prefer it)
+      const pkgRaw = form.elements['pkg']?.value.trim();
+      if (pkgRaw && /^\d+$/.test(pkgRaw)) {
+        body.package = parseInt(pkgRaw, 10);
+      }
+
       try {
         const res = await fetch(WORKER_URL, {
           method: "POST",
@@ -206,4 +217,5 @@
   </script>
 </body>
 </html>
+
 
