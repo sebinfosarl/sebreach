@@ -7,27 +7,32 @@
   <style>
     :root { --bg:#0f1115; --card:#151922; --muted:#2a3040; --text:#e6e8ec; }
     *{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; background:var(--bg); color:var(--text); margin:0}
-    .wrap{max-width:680px;margin:40px auto;padding:24px;background:var(--card);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
-    h1{margin:0 0 8px 0}
-    p.lead{margin:0 0 18px 0;opacity:.9}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;background:var(--bg);color:var(--text);margin:0}
+    .wrap{max-width:720px;margin:40px auto;padding:24px;background:var(--card);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+    h1{margin:0 0 8px}
+    p.lead{margin:0 0 18px;opacity:.9}
     label{display:block;margin:12px 0 6px}
     input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--muted);background:var(--bg);color:var(--text)}
     button{cursor:pointer;font-weight:700;margin-top:14px}
-    pre{white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:12px;margin:0}
     .row{display:flex;gap:12px;flex-wrap:wrap}
     .row > div{flex:1 1 220px}
     .hint{font-size:12px;opacity:.8;margin-top:6px}
     .hide{display:none !important}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .error{background:#2b1212;color:#ffd7d7;border:1px solid #442222;padding:12px;border-radius:10px}
-    .ok{background:#0f1f14;color:#c9ffdf;border:1px solid #1f3a28;padding:12px;border-radius:10px}
+    .card{border:1px solid var(--muted);border-radius:12px;padding:14px;margin-top:14px}
+    .title{font-weight:700;margin-bottom:8px}
+    .kv{display:flex;gap:8px;align-items:center;margin:6px 0}
+    .kv code{flex:1;background:#0b0d12;padding:10px;border-radius:8px;overflow:auto}
+    .small{font-size:12px;opacity:.8}
+    .ok{background:#0f1f14;color:#c9ffdf;border:1px solid #1f3a28;padding:12px;border-radius:10px;margin-top:12px}
+    .error{background:#2b1212;color:#ffd7d7;border:1px solid #442222;padding:12px;border-radius:10px;margin-top:12px;white-space:pre-wrap}
+    .section-heading{margin-top:18px;margin-bottom:6px;font-weight:700}
+    .btn-copy{white-space:nowrap;flex:0 0 auto;padding:10px 12px;margin:0}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Get Your Free IPTV Trial</h1>
-    <p class="lead"><small>No payment. Instant temporary credentials. Works for M3U or MAG.</small></p>
+    <p class="lead"><small>No payment. Instant temporary credentials.</small></p>
 
     <form id="trialForm" autocomplete="off" novalidate>
       <div class="hide">
@@ -64,11 +69,11 @@
       <button id="submitBtn" type="submit">Create Trial</button>
     </form>
 
-    <div id="result" style="margin-top:18px"></div>
+    <div id="result"></div>
   </div>
 
   <script>
-    const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev";
+    const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev"; // your Worker URL
 
     const form = document.getElementById('trialForm');
     const result = document.getElementById('result');
@@ -76,14 +81,8 @@
     const typeSel = form.elements['type'];
     const macWrap = document.getElementById('macWrap');
     const macInput = form.elements['mac'];
-
     const pageLoadedAt = Date.now();
 
-    function toISO2orALL(s){
-      const v = (s || 'MA').trim().toUpperCase();
-      if (v === 'ALL') return 'ALL';
-      return v.slice(0,2);
-    }
     function toggleMac() {
       const t = parseInt(typeSel.value, 10);
       const needMac = (t === 2);
@@ -94,12 +93,89 @@
     toggleMac();
 
     function renderError(msg, details) {
-      result.innerHTML = `<div class="error"><strong>Error:</strong> ${msg}${details ? `<br><small>${details}</small>` : ""}</div>`;
+      result.innerHTML = `<div class="error"><strong>Error:</strong> ${msg}${details ? `\n${details}` : ""}</div>`;
     }
+
+    async function copy(text, btn) {
+      try {
+        await navigator.clipboard.writeText(text);
+        const old = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(()=>btn.textContent = old, 1200);
+      } catch {
+        alert("Copy failed. Long-press to copy manually.");
+      }
+    }
+
+    function safeUrlOrigin(u) {
+      try { return new URL(u).origin; } catch { return ""; }
+    }
+
+    function renderM3U(username, password, url) {
+      const origin = safeUrlOrigin(url);
+      const m3uLink = url || "";
+      return `
+        <div class="ok"><strong>Trial created successfully.</strong></div>
+
+        <div class="section-heading">M3U</div>
+        <div class="card">
+          <div class="kv">
+            <code id="m3u_full">${m3uLink}</code>
+            <button class="btn-copy" data-copy="#m3u_full">Copy</button>
+          </div>
+          <div class="small">Use this link directly in players like IPTV Smarters, VLC, etc.</div>
+        </div>
+
+        <div class="section-heading">Xtream API</div>
+        <div class="card">
+          <div class="kv">
+            <code id="xt_url">${origin}</code>
+            <button class="btn-copy" data-copy="#xt_url">Copy</button>
+          </div>
+          <div class="kv">
+            <code id="xt_user">${username || ""}</code>
+            <button class="btn-copy" data-copy="#xt_user">Copy</button>
+          </div>
+          <div class="kv">
+            <code id="xt_pass">${password || ""}</code>
+            <button class="btn-copy" data-copy="#xt_pass">Copy</button>
+          </div>
+          <div class="small">Use these in Xtream-compatible apps (e.g., Smarters: Login with Xtream Codes).</div>
+        </div>
+      `;
+    }
+
+    function renderMAG(mac, portalUrl) {
+      return `
+        <div class="ok"><strong>Trial created successfully (MAG).</strong></div>
+
+        <div class="section-heading">MAG Device</div>
+        <div class="card">
+          <div class="kv">
+            <code id="mag_mac">${mac || ""}</code>
+            <button class="btn-copy" data-copy="#mag_mac">Copy</button>
+          </div>
+          <div class="kv">
+            <code id="mag_portal">${portalUrl || ""}</code>
+            <button class="btn-copy" data-copy="#mag_portal">Copy</button>
+          </div>
+          <div class="small">Enter the Portal URL in your MAG device settings, with your MAC address.</div>
+        </div>
+      `;
+    }
+
+    // Delegate copy buttons
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-copy');
+      if (!btn) return;
+      const sel = btn.getAttribute('data-copy');
+      const el = document.querySelector(sel);
+      if (el) copy(el.textContent.trim(), btn);
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
+      result.innerHTML = "";
       const email = form.elements['email'].value.trim();
       if (!email) { renderError('Email is required'); return; }
       if ((parseInt(typeSel.value,10) === 2) && !macInput.value.trim()) {
@@ -108,66 +184,62 @@
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Working…";
-      result.innerHTML = "<pre>Creating your trial…</pre>";
+      result.innerHTML = `<div class="card"><span class="small">Creating your trial…</span></div>`;
 
       const body = {
         email,
         type: parseInt(typeSel.value, 10),
-        country: toISO2orALL(form.elements['country'].value),
+        country: (form.elements['country'].value || 'MA').trim().toUpperCase(),
         hp: form.elements['hp']?.value || "",
         ts: pageLoadedAt
       };
       if (body.type === 2) { body.mac = macInput.value.trim(); }
 
-      const controller = new AbortController();
-      const timeout = setTimeout(()=>controller.abort(), 15000);
-
-      let res, data;
       try {
-        res = await fetch(WORKER_URL, {
+        const res = await fetch(WORKER_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          signal: controller.signal
+          body: JSON.stringify(body)
         });
-        clearTimeout(timeout);
-        data = await res.json().catch(()=>null);
+        const data = await res.json().catch(()=>null);
+
+        if (!res.ok) {
+          renderError(data?.error || 'Unknown', typeof data?.details === 'string' ? data.details : JSON.stringify(data?.details||'', null, 2));
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Create Trial";
+          return;
+        }
+
+        // If M3U (type=1), we expect url, username, password in response.
+        const isM3U = (body.type === 1);
+        if (isM3U) {
+          const url = data.url || "";
+          let username = data.username || "";
+          let password = data.password || "";
+
+          // If worker only returned url, extract username/password from it
+          if ((!username || !password) && url) {
+            try {
+              const u = new URL(url);
+              username = username || u.searchParams.get("username") || "";
+              password = password || u.searchParams.get("password") || "";
+            } catch {}
+          }
+
+          result.innerHTML = renderM3U(username, password, url);
+        } else {
+          // MAG
+          const mac = data.username || ""; // worker maps mac to username field for MAG
+          const portal = data.url || "";
+          result.innerHTML = renderMAG(mac, portal);
+        }
+
       } catch (err) {
-        clearTimeout(timeout);
         renderError("Network/CORS error. Check HTTPS and ALLOW_ORIGINS on the Worker.");
+      } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Create Trial";
-        return;
       }
-
-      if (!res.ok) {
-        renderError(data?.error || 'Unknown', typeof data?.details === 'string' ? data.details : JSON.stringify(data?.details||'', null, 2));
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Create Trial";
-        return;
-      }
-
-      const uname = data.username || '-';
-      const pwd   = data.password || '-';
-      const url   = data.url || '';
-      const exp   = data.exp_date || '-';
-      const pkg   = data.package_name || data.package_id || '-';
-      const ct    = data.country || '-';
-      const isM3U = (parseInt(typeSel.value,10) === 1);
-
-      result.innerHTML = `
-        <div class="ok"><strong>Trial created successfully.</strong></div>
-        <pre id="cred">
-Type:     ${isM3U ? 'M3U' : 'MAG'}
-Username: ${uname}
-Password: ${pwd}
-Country:  ${ct}
-Package:  ${pkg}
-URL:      ${url}
-Expires:  ${exp || '(query device_info for expiry)'}
-        </pre>`;
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Create Trial";
     });
   </script>
 </body>
