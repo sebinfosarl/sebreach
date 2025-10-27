@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Free IPTV Trial</title>
+  <style>
+    body{font-family:system-ui;background:#0f1115;color:#e6e8ec;margin:0}
+    .wrap{max-width:640px;margin:40px auto;padding:24px;background:#151922;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+    h1{margin-top:0}
+    label{display:block;margin:12px 0 4px}
+    input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid #2a3040;background:#0f1115;color:#e6e8ec}
+    button{cursor:pointer;font-weight:700;margin-top:14px}
+    pre{white-space:pre-wrap;background:#0f1115;padding:12px;border-radius:12px}
+    .row{display:flex;gap:12px}
+    .row > div{flex:1}
+    .hint{font-size:12px;opacity:.8;margin-top:6px}
+    .hide{display:none !important}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Get Your Free IPTV Trial</h1>
+    <p><small>No payment. You’ll receive temporary credentials instantly.</small></p>
+
+    <form id="trialForm" autocomplete="off">
+      <!-- Honeypot (must stay empty; bots will fill it) -->
+      <div class="hide">
+        <label>Leave this empty</label>
+        <input name="hp" value="">
+      </div>
+
+      <label>Email</label>
+      <input type="email" name="email" required placeholder="you@example.com">
+
+      <div class="row">
+        <div>
+          <label>Type</label>
+          <select name="type">
+            <option value="1">M3U (recommended)</option>
+            <option value="2">MAG</option>
+            <option value="3">E2 (Enigma2)</option>
+            <option value="4">Protocol</option>
+          </select>
+        </div>
+        <div>
+          <label>Country (ISO-2)</label>
+          <input name="country" placeholder="MA">
+          <div class="hint">Examples: MA, FR, US</div>
+        </div>
+      </div>
+
+      <div id="macWrap" style="display:none">
+        <label>MAC (only for MAG/E2)</label>
+        <input name="mac" placeholder="00:11:22:33:44:55">
+      </div>
+
+      <button type="submit">Create Trial</button>
+    </form>
+
+    <div id="result" style="margin-top:18px"></div>
+  </div>
+
+  <script>
+    const WORKER_URL = "https://YOUR-WORKER.SUBDOMAIN.workers.dev"; // ← put your Worker URL here
+    const form = document.getElementById('trialForm');
+    const macWrap = document.getElementById('macWrap');
+    const result = document.getElementById('result');
+
+    // Track when page loaded to enforce a minimum time (4s) before submit
+    const pageLoadedAt = Date.now();
+
+    function toggleMac() {
+      const t = parseInt(form.elements['type'].value, 10);
+      macWrap.style.display = (t===2 || t===3) ? 'block' : 'none';
+    }
+    form.elements['type'].addEventListener('change', toggleMac);
+    toggleMac();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      result.innerHTML = "<pre>Creating your trial…</pre>";
+
+      const body = {
+        email: form.elements['email'].value,
+        type: parseInt(form.elements['type'].value, 10),
+        country: (form.elements['country'].value || 'MA').toUpperCase(),
+        hp: form.elements['hp']?.value || "",
+        ts: pageLoadedAt   // send the time the page opened
+      };
+      if (body.type === 2 || body.type === 3) { body.mac = form.elements['mac'].value; }
+
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json().catch(()=>null);
+      if (!res.ok) {
+        result.innerHTML = `<pre>Error: ${data?.error || 'Unknown'}\n${data?.details || ''}</pre>`;
+        return;
+      }
+
+      result.innerHTML = `
+        <pre>
+Username: ${data.username || '-'}
+Password: ${data.password || '-'}
+Expires:  ${data.exp_date || '-'}
+Country:  ${data.country || '-'}
+Package:  ${data.package_name || data.package_id || '-'}
+
+Save these now. They won't be shown again.
+        </pre>`;
+    });
+  </script>
+</body>
+</html>
