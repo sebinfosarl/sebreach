@@ -5,26 +5,31 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Free IPTV Trial</title>
   <style>
-    body{font-family:system-ui;background:#0f1115;color:#e6e8ec;margin:0}
-    .wrap{max-width:640px;margin:40px auto;padding:24px;background:#151922;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
-    h1{margin-top:0}
-    label{display:block;margin:12px 0 4px}
-    input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid #2a3040;background:#0f1115;color:#e6e8ec}
+    :root { --bg:#0f1115; --card:#151922; --muted:#2a3040; --text:#e6e8ec; }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; background:var(--bg); color:var(--text); margin:0}
+    .wrap{max-width:680px;margin:40px auto;padding:24px;background:var(--card);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+    h1{margin:0 0 8px 0}
+    p.lead{margin:0 0 18px 0;opacity:.9}
+    label{display:block;margin:12px 0 6px}
+    input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--muted);background:var(--bg);color:var(--text)}
     button{cursor:pointer;font-weight:700;margin-top:14px}
-    pre{white-space:pre-wrap;background:#0f1115;padding:12px;border-radius:12px}
-    .row{display:flex;gap:12px}
-    .row > div{flex:1}
+    pre{white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:12px;margin:0}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > div{flex:1 1 220px}
     .hint{font-size:12px;opacity:.8;margin-top:6px}
     .hide{display:none !important}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .error{background:#2b1212;color:#ffd7d7;border:1px solid #442222;padding:12px;border-radius:10px}
+    .ok{background:#0f1f14;color:#c9ffdf;border:1px solid #1f3a28;padding:12px;border-radius:10px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Get Your Free IPTV Trial</h1>
-    <p><small>No payment. You’ll receive temporary credentials instantly.</small></p>
+    <p class="lead"><small>No payment. Instant temporary credentials. Works for M3U or MAG.</small></p>
 
-    <form id="trialForm" autocomplete="off">
+    <form id="trialForm" autocomplete="off" novalidate>
       <!-- Honeypot (must stay empty; bots will fill it) -->
       <div class="hide">
         <label>Leave this empty</label>
@@ -40,19 +45,17 @@
           <select name="type">
             <option value="1">M3U (recommended)</option>
             <option value="2">MAG</option>
-            <option value="3">E2 (Enigma2)</option>
-            <option value="4">Protocol</option>
           </select>
         </div>
         <div>
-          <label>Country (ISO-2)</label>
-          <input name="country" placeholder="MA" maxlength="2">
-          <div class="hint">Examples: MA, FR, US</div>
+          <label>Country (ISO-2 or ALL)</label>
+          <input name="country" placeholder="MA" maxlength="3">
+          <div class="hint">Examples: MA, FR, US or ALL (for VPN)</div>
         </div>
       </div>
 
       <div id="macWrap" style="display:none">
-        <label>MAC (only for MAG/E2)</label>
+        <label>MAC (only for MAG)</label>
         <input name="mac" placeholder="00:11:22:33:44:55"
                pattern="^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
                title="Use format XX:XX:XX:XX:XX:XX">
@@ -66,52 +69,69 @@
   </div>
 
   <script>
-    const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev"; // ← your Worker URL
+    // === configure this to your Worker URL ===
+    const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev";
 
     const form = document.getElementById('trialForm');
-    const macWrap = document.getElementById('macWrap');
-    const macInput = form.elements['mac'];
-    const typeSel = form.elements['type'];
     const result = document.getElementById('result');
     const submitBtn = document.getElementById('submitBtn');
+    const typeSel = form.elements['type'];
+    const macWrap = document.getElementById('macWrap');
+    const macInput = form.elements['mac'];
 
-    // Track when page loaded to enforce a minimum time (4s) before submit
+    // Enforce a minimum time on page (anti-bot)
     const pageLoadedAt = Date.now();
+
+    function toISO2orALL(s){
+      const v = (s || 'MA').trim().toUpperCase();
+      if (v === 'ALL') return 'ALL';
+      return v.slice(0,2);
+    }
 
     function toggleMac() {
       const t = parseInt(typeSel.value, 10);
-      const needMac = (t === 2 || t === 3);
+      const needMac = (t === 2);
       macWrap.style.display = needMac ? 'block' : 'none';
       if (macInput) macInput.required = needMac;
     }
     typeSel.addEventListener('change', toggleMac);
     toggleMac();
 
-    function toISO2(s){ return (s || 'MA').trim().toUpperCase().slice(0,2); }
-
     async function copyText(text) {
       try { await navigator.clipboard.writeText(text); return true; }
       catch { return false; }
     }
 
+    function renderError(msg, details) {
+      result.innerHTML = `<div class="error"><strong>Error:</strong> ${msg}${details ? `<br><small>${details}</small>` : ""}</div>`;
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Basic front-end checks
+      const email = form.elements['email'].value.trim();
+      if (!email) { renderError('Email is required'); return; }
+      if ((parseInt(typeSel.value,10) === 2) && !macInput.value.trim()) {
+        renderError('MAC is required for MAG'); return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = "Working…";
       result.innerHTML = "<pre>Creating your trial…</pre>";
 
       const body = {
-        email: form.elements['email'].value.trim(),
-        type: parseInt(typeSel.value, 10),
-        country: toISO2(form.elements['country'].value),
+        email,
+        type: parseInt(typeSel.value, 10),         // 1=M3U, 2=MAG (my8k)
+        country: toISO2orALL(form.elements['country'].value),
         hp: form.elements['hp']?.value || "",
-        ts: pageLoadedAt   // send the time the page opened
+        ts: pageLoadedAt
       };
-      if (body.type === 2 || body.type === 3) { body.mac = macInput.value.trim(); }
+      if (body.type === 2) { body.mac = macInput.value.trim(); }
 
-      // Timeout + error handling so UI never hangs
+      // safety timeout: never hang UI
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(()=>controller.abort(), 15000);
 
       let res, data;
       try {
@@ -125,45 +145,52 @@
         data = await res.json().catch(()=>null);
       } catch (err) {
         clearTimeout(timeout);
-        result.innerHTML = "<pre>Network/CORS error. Check ALLOW_ORIGINS and HTTPS.</pre>";
+        renderError("Network/CORS error. Check HTTPS and ALLOW_ORIGINS on the Worker.");
         submitBtn.disabled = false;
         submitBtn.textContent = "Create Trial";
         return;
       }
 
       if (!res.ok) {
-        result.innerHTML = `<pre>Error: ${data?.error || 'Unknown'}\n${data?.details || ''}</pre>`;
+        renderError(data?.error || 'Unknown', typeof data?.details === 'string' ? data.details : JSON.stringify(data?.details||'', null, 2));
         submitBtn.disabled = false;
         submitBtn.textContent = "Create Trial";
         return;
       }
 
+      // Success — normalize for my8k
       const uname = data.username || '-';
-      const pwd = data.password || '-';
-      const exp = data.exp_date || '-';
-      const pkg = data.package_name || data.package_id || '-';
-      const ct = data.country || '-';
+      const pwd   = data.password || '-';
+      const url   = data.url || '';
+      const exp   = data.exp_date || '-';
+      const pkg   = data.package_name || data.package_id || '-';
+      const ct    = data.country || '-';
+
+      const isM3U = (parseInt(typeSel.value,10) === 1);
 
       result.innerHTML = `
+        <div class="ok"><strong>Trial created successfully.</strong></div>
         <pre id="cred">
+Type:     ${isM3U ? 'M3U' : 'MAG'}
 Username: ${uname}
 Password: ${pwd}
-Expires:  ${exp}
 Country:  ${ct}
 Package:  ${pkg}
-
-Save these now. They won't be shown again.
+URL:      ${url}
+Expires:  ${exp || '(query device_info for expiry)'}
         </pre>
         <div class="actions">
           <button id="copyUser">Copy Username</button>
           <button id="copyPass">Copy Password</button>
+          <button id="copyURL">Copy URL</button>
           <button id="copyAll">Copy All</button>
         </div>`;
 
       document.getElementById('copyUser').onclick = () => copyText(uname);
       document.getElementById('copyPass').onclick = () => copyText(pwd);
-      document.getElementById('copyAll').onclick = () => copyText(
-        `Username: ${uname}\nPassword: ${pwd}\nExpires: ${exp}\nCountry: ${ct}\nPackage: ${pkg}`
+      document.getElementById('copyURL').onclick  = () => copyText(url);
+      document.getElementById('copyAll').onclick  = () => copyText(
+        `Type: ${isM3U ? 'M3U' : 'MAG'}\nUsername: ${uname}\nPassword: ${pwd}\nCountry: ${ct}\nPackage: ${pkg}\nURL: ${url}\nExpires: ${exp}`
       );
 
       submitBtn.disabled = false;
@@ -172,4 +199,5 @@ Save these now. They won't be shown again.
   </script>
 </body>
 </html>
+
 
