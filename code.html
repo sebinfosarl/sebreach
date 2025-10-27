@@ -30,7 +30,6 @@
     <p class="lead"><small>No payment. Instant temporary credentials. Works for M3U or MAG.</small></p>
 
     <form id="trialForm" autocomplete="off" novalidate>
-      <!-- Honeypot (must stay empty; bots will fill it) -->
       <div class="hide">
         <label>Leave this empty</label>
         <input name="hp" value="">
@@ -69,7 +68,6 @@
   </div>
 
   <script>
-    // === configure this to your Worker URL ===
     const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev";
 
     const form = document.getElementById('trialForm');
@@ -79,7 +77,6 @@
     const macWrap = document.getElementById('macWrap');
     const macInput = form.elements['mac'];
 
-    // Enforce a minimum time on page (anti-bot)
     const pageLoadedAt = Date.now();
 
     function toISO2orALL(s){
@@ -87,7 +84,6 @@
       if (v === 'ALL') return 'ALL';
       return v.slice(0,2);
     }
-
     function toggleMac() {
       const t = parseInt(typeSel.value, 10);
       const needMac = (t === 2);
@@ -97,11 +93,6 @@
     typeSel.addEventListener('change', toggleMac);
     toggleMac();
 
-    async function copyText(text) {
-      try { await navigator.clipboard.writeText(text); return true; }
-      catch { return false; }
-    }
-
     function renderError(msg, details) {
       result.innerHTML = `<div class="error"><strong>Error:</strong> ${msg}${details ? `<br><small>${details}</small>` : ""}</div>`;
     }
@@ -109,7 +100,6 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Basic front-end checks
       const email = form.elements['email'].value.trim();
       if (!email) { renderError('Email is required'); return; }
       if ((parseInt(typeSel.value,10) === 2) && !macInput.value.trim()) {
@@ -122,14 +112,13 @@
 
       const body = {
         email,
-        type: parseInt(typeSel.value, 10),         // 1=M3U, 2=MAG (my8k)
+        type: parseInt(typeSel.value, 10),
         country: toISO2orALL(form.elements['country'].value),
         hp: form.elements['hp']?.value || "",
         ts: pageLoadedAt
       };
       if (body.type === 2) { body.mac = macInput.value.trim(); }
 
-      // safety timeout: never hang UI
       const controller = new AbortController();
       const timeout = setTimeout(()=>controller.abort(), 15000);
 
@@ -158,14 +147,12 @@
         return;
       }
 
-      // Success — normalize for my8k
       const uname = data.username || '-';
       const pwd   = data.password || '-';
       const url   = data.url || '';
       const exp   = data.exp_date || '-';
       const pkg   = data.package_name || data.package_id || '-';
       const ct    = data.country || '-';
-
       const isM3U = (parseInt(typeSel.value,10) === 1);
 
       result.innerHTML = `
@@ -178,26 +165,10 @@ Country:  ${ct}
 Package:  ${pkg}
 URL:      ${url}
 Expires:  ${exp || '(query device_info for expiry)'}
-        </pre>
-        <div class="actions">
-          <button id="copyUser">Copy Username</button>
-          <button id="copyPass">Copy Password</button>
-          <button id="copyURL">Copy URL</button>
-          <button id="copyAll">Copy All</button>
-        </div>`;
-
-      document.getElementById('copyUser').onclick = () => copyText(uname);
-      document.getElementById('copyPass').onclick = () => copyText(pwd);
-      document.getElementById('copyURL').onclick  = () => copyText(url);
-      document.getElementById('copyAll').onclick  = () => copyText(
-        `Type: ${isM3U ? 'M3U' : 'MAG'}\nUsername: ${uname}\nPassword: ${pwd}\nCountry: ${ct}\nPackage: ${pkg}\nURL: ${url}\nExpires: ${exp}`
-      );
-
+        </pre>`;
       submitBtn.disabled = false;
       submitBtn.textContent = "Create Trial";
     });
   </script>
 </body>
 </html>
-
-
