@@ -16,6 +16,7 @@
     .row > div{flex:1}
     .hint{font-size:12px;opacity:.8;margin-top:6px}
     .hide{display:none !important}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   </style>
 </head>
 <body>
@@ -31,7 +32,7 @@
       </div>
 
       <label>Email</label>
-      <input type="email" name="email" required placeholder="you@example.com">
+      <input type="email" name="email" required placeholder="you@example.com" inputmode="email" autocomplete="email">
 
       <div class="row">
         <div>
@@ -45,74 +46,130 @@
         </div>
         <div>
           <label>Country (ISO-2)</label>
-          <input name="country" placeholder="MA">
+          <input name="country" placeholder="MA" maxlength="2">
           <div class="hint">Examples: MA, FR, US</div>
         </div>
       </div>
 
       <div id="macWrap" style="display:none">
         <label>MAC (only for MAG/E2)</label>
-        <input name="mac" placeholder="00:11:22:33:44:55">
+        <input name="mac" placeholder="00:11:22:33:44:55"
+               pattern="^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+               title="Use format XX:XX:XX:XX:XX:XX">
+        <div class="hint">Format: XX:XX:XX:XX:XX:XX</div>
       </div>
 
-      <button type="submit">Create Trial</button>
+      <button id="submitBtn" type="submit">Create Trial</button>
     </form>
 
     <div id="result" style="margin-top:18px"></div>
   </div>
 
   <script>
-    const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev"; // ← put your Worker URL here
+    const WORKER_URL = "https://divine-disk-ff57.restless-cell-d69c.workers.dev"; // ← your Worker URL
+
     const form = document.getElementById('trialForm');
     const macWrap = document.getElementById('macWrap');
+    const macInput = form.elements['mac'];
+    const typeSel = form.elements['type'];
     const result = document.getElementById('result');
+    const submitBtn = document.getElementById('submitBtn');
 
     // Track when page loaded to enforce a minimum time (4s) before submit
     const pageLoadedAt = Date.now();
 
     function toggleMac() {
-      const t = parseInt(form.elements['type'].value, 10);
-      macWrap.style.display = (t===2 || t===3) ? 'block' : 'none';
+      const t = parseInt(typeSel.value, 10);
+      const needMac = (t === 2 || t === 3);
+      macWrap.style.display = needMac ? 'block' : 'none';
+      if (macInput) macInput.required = needMac;
     }
-    form.elements['type'].addEventListener('change', toggleMac);
+    typeSel.addEventListener('change', toggleMac);
     toggleMac();
+
+    function toISO2(s){ return (s || 'MA').trim().toUpperCase().slice(0,2); }
+
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); return true; }
+      catch { return false; }
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Working…";
       result.innerHTML = "<pre>Creating your trial…</pre>";
 
       const body = {
-        email: form.elements['email'].value,
-        type: parseInt(form.elements['type'].value, 10),
-        country: (form.elements['country'].value || 'MA').toUpperCase(),
+        email: form.elements['email'].value.trim(),
+        type: parseInt(typeSel.value, 10),
+        country: toISO2(form.elements['country'].value),
         hp: form.elements['hp']?.value || "",
         ts: pageLoadedAt   // send the time the page opened
       };
-      if (body.type === 2 || body.type === 3) { body.mac = form.elements['mac'].value; }
+      if (body.type === 2 || body.type === 3) { body.mac = macInput.value.trim(); }
 
-      const res = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
+      // Timeout + error handling so UI never hangs
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
 
-      const data = await res.json().catch(()=>null);
-      if (!res.ok) {
-        result.innerHTML = `<pre>Error: ${data?.error || 'Unknown'}\n${data?.details || ''}</pre>`;
+      let res, data;
+      try {
+        res = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        data = await res.json().catch(()=>null);
+      } catch (err) {
+        clearTimeout(timeout);
+        result.innerHTML = "<pre>Network/CORS error. Check ALLOW_ORIGINS and HTTPS.</pre>";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Create Trial";
         return;
       }
 
+      if (!res.ok) {
+        result.innerHTML = `<pre>Error: ${data?.error || 'Unknown'}\n${data?.details || ''}</pre>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Create Trial";
+        return;
+      }
+
+      const uname = data.username || '-';
+      const pwd = data.password || '-';
+      const exp = data.exp_date || '-';
+      const pkg = data.package_name || data.package_id || '-';
+      const ct = data.country || '-';
+
       result.innerHTML = `
-        <pre>
-Username: ${data.username || '-'}
-Password: ${data.password || '-'}
-Expires:  ${data.exp_date || '-'}
-Country:  ${data.country || '-'}
-Package:  ${data.package_name || data.package_id || '-'}
+        <pre id="cred">
+Username: ${uname}
+Password: ${pwd}
+Expires:  ${exp}
+Country:  ${ct}
+Package:  ${pkg}
 
 Save these now. They won't be shown again.
-        </pre>`;
+        </pre>
+        <div class="actions">
+          <button id="copyUser">Copy Username</button>
+          <button id="copyPass">Copy Password</button>
+          <button id="copyAll">Copy All</button>
+        </div>`;
+
+      document.getElementById('copyUser').onclick = () => copyText(uname);
+      document.getElementById('copyPass').onclick = () => copyText(pwd);
+      document.getElementById('copyAll').onclick = () => copyText(
+        `Username: ${uname}\nPassword: ${pwd}\nExpires: ${exp}\nCountry: ${ct}\nPackage: ${pkg}`
+      );
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create Trial";
     });
   </script>
 </body>
 </html>
+
