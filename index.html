@@ -3,25 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Nos plans d’abonnement IPTV — Paiement sécurisé via Payhip</title>
-  <meta name="description" content="Abonnements IPTV (1–24 mois). 25 000+ chaînes, 100 000+ VOD, sans coupure, support pendant toute la durée. Paiement PayPal ou Stripe via Payhip." />
-  <link rel="preconnect" href="https://payhip.com" />
+  <title>Nos plans d’abonnement IPTV — Paiement sécurisé</title>
+  <meta name="description" content="Abonnements IPTV (1–24 mois). 25 000+ chaînes, 100 000+ VOD, support pendant toute la durée. Paiement carte bancaire (Payhip) ou PayPal/Transfer bancaire (Hotmart)." />
+  <link rel="preconnect" href="https://payhip.com" crossorigin>
+  <link rel="dns-prefetch" href="https://payhip.com">
   <style>
-    :root { --bg:#0f1115; --card:#151922; --text:#eaf0ff; --muted:#9aa3b2; --accent:#22c55e; --pop:#f59e0b; }
+    :root {
+      --bg:#0f1115; --card:#151922; --text:#eaf0ff; --muted:#9aa3b2;
+      --blue:#2563eb; --orange:#f59e0b; --border:#202636;
+    }
     *{box-sizing:border-box}
+    html{color-scheme:dark}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
     .wrap{max-width:1100px;margin:auto;padding:28px}
     header{text-align:center;margin-bottom:22px}
     h1{margin:0 0 8px;font-size:28px}
     .lead{margin:0;color:var(--muted)}
     .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:24px}
-    .card{position:relative;background:var(--card);border:1px solid #202636;border-radius:16px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:220px}
-    .badge{position:absolute;top:12px;right:12px;background:var(--pop);color:#111;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}
+    .card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;min-height:260px}
     .title{font-weight:800;margin:0 0 10px;line-height:1.25}
     .desc{color:var(--muted);font-size:14px;margin:0 0 8px}
     .price{font-weight:800;margin:0 0 14px}
-    .btn{display:inline-block;text-align:center;padding:12px 16px;border-radius:12px;background:var(--accent);color:#fff;text-decoration:none;font-weight:800}
+    .btn{display:inline-block;text-align:center;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}
     .btn:active{transform:translateY(1px)}
+    .btn-blue{background:var(--blue);color:#fff}
+    .btn-orange{background:var(--orange);color:#111}
+    .btn-group{display:grid;gap:10px;margin-top:auto}
     footer{margin-top:26px;text-align:center;color:var(--muted);font-size:12px}
   </style>
 </head>
@@ -29,22 +36,34 @@
   <div class="wrap">
     <header>
       <h1>Nos plans d’abonnement IPTV ✅</h1>
-      <p class="lead">25 000+ chaînes & 100 000+ VOD • Sans coupure • Support pendant toute la durée • Paiement via PayPal ou Stripe</p>
+      <p class="lead">25 000+ chaînes & 100 000+ VOD • Sans coupure • Support pendant toute la durée</p>
     </header>
 
     <section class="grid">
-      <!-- 24 mois -->
+      <!-- 24 mois (45€) -->
       <article class="card">
         <div>
           <h3 class="title">Abonnement — 24 mois</h3>
           <p class="desc">Accès complet 2 ans. 25 000+ chaînes, 100 000+ VOD, stabilité optimale, support prioritaire.</p>
-          <p class="price">35 € — PayPal ou Stripe</p>
+          <p class="price">45 € — PayPal / Carte / Transfer</p>
         </div>
-        <a class="btn payhip-buy-button"
-           href="https://payhip.com/b/mr8BJ"
-           data-product="mr8BJ"
-           data-theme="green"
-           aria-label="Acheter l’abonnement 24 mois (35 euros)">Acheter Maintenant</a>
+        <div class="btn-group">
+          <!-- ORANGE: PayPal ou Transfer bancaire (Hotmart) -->
+          <a class="btn btn-orange"
+             href="https://pay.hotmart.com/Y85994953T?off=iq1hnxqi"
+             rel="noopener"
+             aria-label="Payer par paypal ou Transfer bancaire — 24 mois">
+             Payer par paypal ou Transfer bancaire
+          </a>
+          <!-- BLUE: Carte bancaire (Payhip/Stripe) -->
+          <a class="btn btn-blue payhip-buy-button"
+             href="https://payhip.com/b/mr8BJ"
+             data-product="mr8BJ"
+             data-theme="blue"
+             aria-label="Payer par carte bancaire — 24 mois (45 euros)">
+             Payer par carte bancaire
+          </a>
+        </div>
       </article>
 
       <!-- 12 mois ++ -->
@@ -52,27 +71,23 @@
         <div>
           <h3 class="title">Abonnement — 12 mois ++</h3>
           <p class="desc">1 an + VPN. 25 000+ chaînes, 100 000+ VOD, sans coupure, support continu.</p>
-          <p class="price">25 € — PayPal ou Stripe</p>
+          <p class="price">25 € — PayPal / Carte / Transfer</p>
         </div>
-        <a class="btn payhip-buy-button"
-           href="https://payhip.com/b/Y4SRm"
-           data-product="Y4SRm"
-           data-theme="green"
-           aria-label="Acheter l’abonnement 12 mois ++ (25 euros)">Acheter Maintenant</a>
-      </article>
-
-      <!-- 12 mois -->
-      <article class="card">
-        <div>
-          <h3 class="title">Abonnement — 12 mois</h3>
-          <p class="desc">1 an d’accès complet. 25 000+ chaînes et 100 000+ VOD, streaming fluide, assistance incluse.</p>
-          <p class="price">20 € — PayPal ou Stripe</p>
+        <div class="btn-group">
+          <a class="btn btn-orange"
+             href="https://pay.hotmart.com/Y85994953T?off=y6jmw9wd"
+             rel="noopener"
+             aria-label="Payer par paypal ou Transfer bancaire — 12 mois ++">
+             Payer par paypal ou Transfer bancaire
+          </a>
+          <a class="btn btn-blue payhip-buy-button"
+             href="https://payhip.com/b/Y4SRm"
+             data-product="Y4SRm"
+             data-theme="blue"
+             aria-label="Payer par carte bancaire — 12 mois ++ (25 euros)">
+             Payer par carte bancaire
+          </a>
         </div>
-        <a class="btn payhip-buy-button"
-           href="https://payhip.com/b/1Jgxh"
-           data-product="1Jgxh"
-           data-theme="green"
-           aria-label="Acheter l’abonnement 12 mois (20 euros)">Acheter Maintenant</a>
       </article>
 
       <!-- 6 mois -->
@@ -80,13 +95,23 @@
         <div>
           <h3 class="title">Abonnement — 6 mois</h3>
           <p class="desc">Semestre complet. Même catalogue complet (25 k+ chaînes / 100 k+ VOD) avec support.</p>
-          <p class="price">15 € — PayPal ou Stripe</p>
+          <p class="price">15 € — PayPal / Carte / Transfer</p>
         </div>
-        <a class="btn payhip-buy-button"
-           href="https://payhip.com/b/VrqWf"
-           data-product="VrqWf"
-           data-theme="green"
-           aria-label="Acheter l’abonnement 6 mois (15 euros)">Acheter Maintenant</a>
+        <div class="btn-group">
+          <a class="btn btn-orange"
+             href="https://pay.hotmart.com/Y85994953T?off=h9hcfb4d"
+             rel="noopener"
+             aria-label="Payer par paypal ou Transfer bancaire — 6 mois">
+             Payer par paypal ou Transfer bancaire
+          </a>
+          <a class="btn btn-blue payhip-buy-button"
+             href="https://payhip.com/b/VrqWf"
+             data-product="VrqWf"
+             data-theme="blue"
+             aria-label="Payer par carte bancaire — 6 mois (15 euros)">
+             Payer par carte bancaire
+          </a>
+        </div>
       </article>
 
       <!-- 3 mois -->
@@ -94,13 +119,23 @@
         <div>
           <h3 class="title">Abonnement — 3 mois</h3>
           <p class="desc">Trimestre d’accès. Idéal pour tester longuement la stabilité et le support.</p>
-          <p class="price">10 € — PayPal ou Stripe</p>
+          <p class="price">10 € — PayPal / Carte / Transfer</p>
         </div>
-        <a class="btn payhip-buy-button"
-           href="https://payhip.com/b/94M07"
-           data-product="94M07"
-           data-theme="green"
-           aria-label="Acheter l’abonnement 3 mois (10 euros)">Acheter Maintenant</a>
+        <div class="btn-group">
+          <a class="btn btn-orange"
+             href="https://pay.hotmart.com/Y85994953T?off=9wt2br1y"
+             rel="noopener"
+             aria-label="Payer par paypal ou Transfer bancaire — 3 mois">
+             Payer par paypal ou Transfer bancaire
+          </a>
+          <a class="btn btn-blue payhip-buy-button"
+             href="https://payhip.com/b/94M07"
+             data-product="94M07"
+             data-theme="blue"
+             aria-label="Payer par carte bancaire — 3 mois (10 euros)">
+             Payer par carte bancaire
+          </a>
+        </div>
       </article>
 
       <!-- 1 mois -->
@@ -108,24 +143,88 @@
         <div>
           <h3 class="title">Abonnement — 1 mois</h3>
           <p class="desc">Accès mensuel. Même catalogue complet, streaming fluide, support durant tout le mois.</p>
-          <p class="price">5 € — PayPal ou Stripe</p>
+          <p class="price">5 € — PayPal / Carte / Transfer</p>
         </div>
-        <a class="btn payhip-buy-button"
-           href="https://payhip.com/b/FHSIN"
-           data-product="FHSIN"
-           data-theme="green"
-           aria-label="Acheter l’abonnement 1 mois (5 euros)">Acheter Maintenant</a>
+        <div class="btn-group">
+          <a class="btn btn-orange"
+             href="https://pay.hotmart.com/Y85994953T?off=4vv16lrf"
+             rel="noopener"
+             aria-label="Payer par paypal ou Transfer bancaire — 1 mois">
+             Payer par paypal ou Transfer bancaire
+          </a>
+          <a class="btn btn-blue payhip-buy-button"
+             href="https://payhip.com/b/FHSIN"
+             data-product="FHSIN"
+             data-theme="blue"
+             aria-label="Payer par carte bancaire — 1 mois (5 euros)">
+             Payer par carte bancaire
+          </a>
+        </div>
       </article>
     </section>
 
     <footer>
-      Payhip modal activé • Paiement sécurisé (Stripe/PayPal)
-      <!-- Optionnel: contact WhatsApp -->
-      <!-- <br>Besoin d’aide ? <a href="https://wa.me/2126XXXXXXXX" style="color:#eaf0ff">+212 6 XX XX XX XX</a> -->
+      Payhip (carte bancaire) & Hotmart (PayPal / Transfer) • Paiement sécurisé
     </footer>
   </div>
 
-  <!-- Charge Payhip une seule fois pour tous les boutons -->
-  <script src="https://payhip.com/payhip.js"></script>
+  <!-- JSON-LD: 5 plans + prix 24 mois à 45€ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Plans d’abonnement IPTV",
+    "itemListElement": [
+      {
+        "@type": "Product",
+        "name": "Abonnement IPTV — 24 mois",
+        "description": "Accès complet 2 ans. 25 000+ chaînes, 100 000+ VOD, stabilité optimale, support prioritaire.",
+        "offers": [
+          { "@type": "Offer", "url": "https://pay.hotmart.com/Y85994953T?off=iq1hnxqi", "price": "45.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "PayPal/Transfer" },
+          { "@type": "Offer", "url": "https://payhip.com/b/mr8BJ", "price": "45.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "Carte bancaire" }
+        ]
+      },
+      {
+        "@type": "Product",
+        "name": "Abonnement IPTV — 12 mois ++",
+        "description": "1 an + VPN. 25 000+ chaînes, 100 000+ VOD, sans coupure, support continu.",
+        "offers": [
+          { "@type": "Offer", "url": "https://pay.hotmart.com/Y85994953T?off=y6jmw9wd", "price": "25.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "PayPal/Transfer" },
+          { "@type": "Offer", "url": "https://payhip.com/b/Y4SRm", "price": "25.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "Carte bancaire" }
+        ]
+      },
+      {
+        "@type": "Product",
+        "name": "Abonnement IPTV — 6 mois",
+        "description": "Semestre complet. 25 000+ chaînes / 100 000+ VOD, avec support.",
+        "offers": [
+          { "@type": "Offer", "url": "https://pay.hotmart.com/Y85994953T?off=h9hcfb4d", "price": "15.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "PayPal/Transfer" },
+          { "@type": "Offer", "url": "https://payhip.com/b/VrqWf", "price": "15.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "Carte bancaire" }
+        ]
+      },
+      {
+        "@type": "Product",
+        "name": "Abonnement IPTV — 3 mois",
+        "description": "Trimestre d’accès. Idéal pour tester la stabilité et le support.",
+        "offers": [
+          { "@type": "Offer", "url": "https://pay.hotmart.com/Y85994953T?off=9wt2br1y", "price": "10.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "PayPal/Transfer" },
+          { "@type": "Offer", "url": "https://payhip.com/b/94M07", "price": "10.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "Carte bancaire" }
+        ]
+      },
+      {
+        "@type": "Product",
+        "name": "Abonnement IPTV — 1 mois",
+        "description": "Accès mensuel. Catalogue complet, streaming fluide, support durant tout le mois.",
+        "offers": [
+          { "@type": "Offer", "url": "https://pay.hotmart.com/Y85994953T?off=4vv16lrf", "price": "5.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "PayPal/Transfer" },
+          { "@type": "Offer", "url": "https://payhip.com/b/FHSIN", "price": "5.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "category": "Carte bancaire" }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <!-- Payhip for blue (carte bancaire) buttons -->
+  <script defer src="https://payhip.com/payhip.js"></script>
 </body>
 </html>
