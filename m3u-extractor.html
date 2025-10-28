@@ -1,111 +1,111 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IPTV Utils — Extraction & M3U</title>
-  <meta name="description" content="Deux outils : Extraction depuis image (OpenAI proxy) et Générateur de template M3U." />
+  <title>Extracteur IPTV + Générateur M3U — corrigé</title>
   <style>
-    :root { --bg:#0f1115; --card:#161a23; --text:#e9eef5; --muted:#9aa3b2; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; }
+    :root{--bg:#0b0f12;--card:#12171c;--muted:#8a97a6;--text:#e6edf3;--accent:#2f81f7;--ok:#2ea043;--warn:#e3b341;--err:#f85149;--border:#26303a}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Helvetica,Arial;background:var(--bg);color:var(--text)}
-    a{color:inherit}
-    .container{max-width:1000px;margin:24px auto;padding:16px}
-    .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-    .tabbtn{cursor:pointer;background:#2a3144;border:1px solid rgba(255,255,255,.06);color:#fff;padding:10px 14px;border-radius:12px;font-weight:600}
-    .tabbtn.active{background:var(--accent)}
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,0.35)}
-    h1{margin:0 0 6px}
-    p.lead{margin:0 0 14px;color:var(--muted)}
-    .muted{color:var(--muted);font-size:13px}
-    .ok{color:var(--ok)} .warn{color:var(--warn)}
-    button{cursor:pointer;border:0;border-radius:10px;padding:12px 16px;font-weight:600;color:white;background:var(--accent)}
-    button.secondary{background:#2a3144}
-    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+    a{color:var(--accent);text-decoration:none}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .tabbar{display:flex;gap:8px;margin-bottom:16px}
+    .tabbtn{padding:10px 14px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:10px;cursor:pointer}
+    .tabbtn.active{outline:2px solid var(--accent)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+    h1{font-size:20px;margin:4px 0 8px}
+    .lead{color:var(--muted);margin:0 0 12px}
+    label{display:block;margin:12px 0 6px;color:var(--muted)}
+    input[type="text"],input[type="url"],select,textarea{width:100%;background:#0e1318;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px}
+    textarea{min-height:160px;resize:vertical}
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    button{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#18202a;color:var(--text);cursor:pointer}
+    button.secondary{background:#11161b}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .status{margin-top:8px;color:var(--muted)}
+    .status.ok{color:var(--ok)}
+    .status.warn{color:var(--warn)}
+    .drop{display:flex;align-items:center;justify-content:center;border:1px dashed var(--border);border-radius:12px;padding:18px;min-height:68px;color:var(--muted);background:#0e1318}
+    .drop.drag{border-color:var(--accent);color:var(--text)}
 
-    /* Extracteur */
-    .drop{position:relative;border:2px dashed rgba(255,255,255,.15);border-radius:14px;padding:20px;text-align:center;cursor:pointer; user-select:none;}
-    .drop.drag{border-color:var(--accent);background:#0e1320}
-    .drop input[type="file"]{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;}
-    .pick-row{display:flex;align-items:center;gap:10px;margin:8px 0 0 0;justify-content:center}
-    .switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
-    .switch input{width:20px;height:20px}
-
-    img#preview{max-width:100%;border-radius:12px;margin-top:12px}
-    .result{margin-top:16px;background:#0e1118;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
-    .row{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 0}
-    .result .row + .row{border-top:1px solid rgba(255,255,255,.10);margin-top:10px;padding-top:14px}
-    .row .label{color:var(--muted)}
-    .row .value{font-family:ui-monospace,Menlo,Consolas,monospace;background:#101421;border-radius:8px;padding:10px 12px;min-height:42px;display:flex;align-items:center;word-break:break-all}
-    .row a.value{color:var(--accent);text-decoration:none}
-    .copybtn{background:#2a3144;padding:10px 12px;border-radius:8px;font-size:13px}
-    .status{margin-top:10px;color:var(--muted)}
-    .note{margin-top:14px;color:var(--muted);font-size:12px}
-
-    #debugWrap{margin-top:10px;display:none}
-    #debug{white-space:pre-wrap;background:#0c0f16;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px;font-size:12px;color:#9aa3b2}
-
-    /* M3U generator */
-    .grid{display:grid;grid-template-columns:1fr;gap:16px}
-    @media (min-width: 720px){ .grid{grid-template-columns:1fr 1fr} }
-    label{display:block;font-weight:600;margin:16px 0 8px}
-    input[type="text"], input[type="url"], textarea, select{
-      width:100%;background:#0e1118;color:var(--text);border:1px solid rgba(255,255,255,.08);
-      border-radius:12px;padding:12px 14px;font-size:15px;outline:none;transition:border-color .2s
+    /* === Extracteur: layout side-by-side on desktop === */
+    .extractor-grid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
+    @media (min-width: 900px){
+      .extractor-grid{grid-template-columns: 1.1fr .9fr}
     }
-    textarea{min-height:200px;resize:vertical}
-    input:focus, textarea:focus, select:focus{border-color:var(--accent)}
-    .extras{margin-top:18px;display:grid;gap:12px}
-    .extras .row2{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
-    .extras .title{font-weight:600;margin-top:10px}
-    .footer{margin-top:22px;font-size:12px;color:var(--muted);text-align:center}
+    .pane{display:flex;flex-direction:column;gap:10px}
+    #preview{max-width:100%;border-radius:12px;border:1px solid var(--border);display:block}
+
+    .result{display:flex;flex-direction:column;gap:8px}
+    .row{display:grid;grid-template-columns:140px 1fr auto;gap:8px;align-items:center}
+    .label{color:var(--muted)}
+    .value{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .copybtn{white-space:nowrap}
+
+    .extras{margin-top:12px;border-top:1px dashed var(--border);padding-top:12px}
+    .extras .title{color:var(--muted);margin-bottom:8px}
+    .row2{display:grid;grid-template-columns:1fr auto;gap:8px;margin:6px 0}
+
+    #debugWrap{display:none;margin-top:12px}
+    #debug{max-height:180px;overflow:auto;background:#0e1318;border:1px solid var(--border);border-radius:10px;padding:10px}
+
+    .footer{color:var(--muted);margin-top:10px;font-size:13px}
+    .switch{display:flex;align-items:center;gap:8px;color:var(--muted)}
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="tabs">
-    <button class="tabbtn active" data-tab="extractor">Extraction depuis image</button>
+<div class="wrap">
+  <div class="tabbar">
+    <button class="tabbtn active" data-tab="extractor">Extracteur</button>
     <button class="tabbtn" data-tab="m3u">Générateur M3U</button>
   </div>
 
   <!-- Extracteur -->
-  <section id="extractor" class="card">
-    <h1>Extraction depuis capture d’écran IPTV</h1>
+  <section id="extractor" class="card" aria-labelledby="h-extractor">
+    <h1 id="h-extractor">Extraction depuis capture d’écran IPTV</h1>
     <p class="lead">Téléversez l’image → obtenez <b>Site</b>, <b>MAC</b>, <b>Device Key</b>, <b>Device ID</b> via <b>OpenAI (proxy)</b>.</p>
 
     <label class="muted">Glissez-déposez/Téléchargez une image ici</label>
-    <div id="drop" class="drop" aria-label="Sélecteur d'image">
+    <div id="drop" class="drop" tabindex="0" role="button" aria-label="Sélecteur d'image. Appuyez Entrée pour choisir.">
       <div>Glissez-déposez/Téléchargez une image ici</div>
-      <input id="file" type="file" accept="image/*" aria-label="Choisir une image">
+      <input id="file" type="file" accept="image/*" aria-label="Choisir une image" hidden>
     </div>
-    <div class="pick-row">
+
+    <div class="btns">
       <label class="switch" title="Activer pour prendre une photo directement">
         <input id="toggleCamera" type="checkbox"> Utiliser la caméra
       </label>
+      <span id="status" class="status" aria-live="polite">Prêt.</span>
     </div>
 
-    <img id="preview" alt="Aperçu">
+    <!-- Side-by-side layout: left preview, right extracted fields -->
+    <div class="extractor-grid">
+      <div class="pane">
+        <img id="preview" alt="Aperçu" loading="lazy">
+        <div class="btns">
+          <button id="runAi" type="button" class="secondary">Analyser avec OpenAI (proxy)</button>
+          <button id="clear" type="button" class="secondary">Effacer</button>
+        </div>
+      </div>
 
-    <div class="btns">
-      <button id="runAi" type="button" class="secondary">Analyser avec OpenAI (proxy)</button>
-      <button id="clear" type="button" class="secondary">Effacer</button>
+      <div class="pane">
+        <div class="result" aria-live="polite">
+          <div class="row"><div class="label">Site</div><a id="siteLink" class="value" href="#" target="_blank" rel="noopener noreferrer"></a><button class="copybtn" type="button" data-copy="#siteLink" aria-label="Copier site">Copier</button></div>
+          <div class="row"><div class="label">Adresse MAC</div><div id="mac" class="value"></div><button class="copybtn" type="button" data-copy="#mac" aria-label="Copier MAC">Copier</button></div>
+          <div class="row"><div class="label">MAC (sans « : »)</div><div id="macplain" class="value"></div><button class="copybtn" type="button" data-copy="#macplain" aria-label="Copier MAC sans séparateurs">Copier</button></div>
+          <div class="row"><div class="label">Clé appareil</div><div id="dkey" class="value"></div><button class="copybtn" type="button" data-copy="#dkey" aria-label="Copier Device Key">Copier</button></div>
+          <div class="row"><div class="label">Device ID</div><div id="did" class="value"></div><button class="copybtn" type="button" data-copy="#did" aria-label="Copier Device ID">Copier</button></div>
+        </div>
+
+        <div id="debugWrap">
+          <div class="muted">Debug</div>
+          <pre id="debug"></pre>
+        </div>
+
+        <p class="footer">⚠️ Données sensibles : ne stockez/partagez que si vous avez le droit.</p>
+      </div>
     </div>
-    <div id="status" class="status">Prêt.</div>
-
-    <div class="result">
-      <div class="row"><div class="label">Site</div><a id="siteLink" class="value" href="#" target="_blank" rel="noopener noreferrer"></a><span></span></div>
-      <div class="row"><div class="label">Adresse MAC</div><div id="mac" class="value"></div><button class="copybtn" type="button" data-copy="#mac">Copier</button></div>
-      <div class="row"><div class="label">MAC (sans « : »)</div><div id="macplain" class="value"></div><button class="copybtn" type="button" data-copy="#macplain">Copier</button></div>
-      <div class="row"><div class="label">Clé appareil</div><div id="dkey" class="value"></div><button class="copybtn" type="button" data-copy="#dkey">Copier</button></div>
-      <div class="row"><div class="label">Device ID</div><div id="did" class="value"></div><button class="copybtn" type="button" data-copy="#did">Copier</button></div>
-    </div>
-
-    <div id="debugWrap">
-      <div class="muted">Debug</div>
-      <pre id="debug"></pre>
-    </div>
-
-    <p class="note">Par défaut, vous choisissez dans la galerie/fichiers. Activez “Utiliser la caméra” pour ouvrir directement l’appareil photo.</p>
   </section>
 
   <!-- M3U -->
@@ -158,10 +158,12 @@ document.querySelectorAll('.tabbtn').forEach(btn=>{
   });
 });
 
-/* ---------- Extracteur ---------- */
+/* ---------- Constantes & helpers ---------- */
 const WORKER_URL = 'https://throbbing-voice-52a9.restless-cell-d69c.workers.dev';
 
-const $ = (s)=> document.querySelector(s);
+const $  = (s)=> document.querySelector(s);
+const $$ = (s)=> Array.from(document.querySelectorAll(s));
+
 const statusEl = $('#status'), siteLink = $('#siteLink'), macEl = $('#mac'), macPlainEl = $('#macplain'), dkeyEl = $('#dkey'), didEl = $('#did');
 const fileInput = $('#file'), drop = $('#drop'), preview = $('#preview');
 const runAiBtn = $('#runAi'), clearBtn = $('#clear'), toggleCamera = $('#toggleCamera');
@@ -170,52 +172,70 @@ const debugWrap = $('#debugWrap'), debugEl = $('#debug');
 let currentFile = null;
 let isBusy = false;
 
-// --- NOUVELLE FONCTION DE RÉINITIALISATION CENTRALE ---
-function resetAppState() {
-  // Réinitialisation de l'état logique
-  isBusy = false;
-  currentFile = null;
-  fileInput.value = '';
-
-  // Réinitialisation de l'interface utilisateur
-  runAiBtn.disabled = false;
-  preview.removeAttribute('src');
-  siteLink.textContent=''; siteLink.removeAttribute('href');
-  macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
-  
-  // Nettoyage des messages
-  setStatus('Prêt.');
-  hideDebug();
-  console.log('Application state has been reset.');
-}
-
-// --- NOUVEAU FIX AUTOMATIQUE POUR MOBILE ---
-// Se déclenche quand on revient sur la page (après un changement d'onglet ou une mise en veille)
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted) {
-    console.log('Page restaurée depuis le cache (BFCache). Forcing state reset.');
-    resetAppState();
-  }
-});
-
-
 function setStatus(text, cls=''){ statusEl.className='status '+(cls||''); statusEl.textContent=text; }
-function showDebug(msg){ debugWrap.style.display='block'; debugEl.textContent = (debugEl.textContent? debugEl.textContent+'\n':'') + msg; }
+function showDebug(msg){ debugWrap.style.display='block'; const now = String(msg).slice(0, 2000); debugEl.textContent = (debugEl.textContent? debugEl.textContent+'\n':'') + now; }
 function hideDebug(){ debugWrap.style.display='none'; debugEl.textContent=''; }
 
-toggleCamera.addEventListener('change', ()=>{
-  if(toggleCamera.checked){ fileInput.setAttribute('capture','environment'); }
-  else { fileInput.removeAttribute('capture'); }
-});
+function normalizeHttpUrl(u){
+  if(!u) return '';
+  const s = String(u).trim();
+  const hostLike = /^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(s);
+  const candidate = /^https?:\/\//i.test(s) ? s : (hostLike ? 'https://' + s : '');
+  try {
+    const url = new URL(candidate);
+    if (url.protocol === 'http:' || url.protocol === 'https:') return url.toString();
+  } catch(_) {}
+  return '';
+}
 
-document.addEventListener('click', e=>{
-  const b = e.target.closest('[data-copy]'); if(!b) return;
-  e.preventDefault();
-  const node = document.querySelector(b.getAttribute('data-copy')); if(!node) return;
-  const txt = (node.textContent || node.value || '').trim(); if(!txt) return;
-  navigator.clipboard?.writeText(txt);
-  setStatus('Copié !','ok'); setTimeout(()=>setStatus('Prêt.'),900);
-});
+async function fetchWithTimeout(url, opts={}, ms=20000){
+  const ctrl = new AbortController();
+  const id = setTimeout(()=>ctrl.abort(), ms);
+  try { return await fetch(url, {...opts, signal: ctrl.signal}); }
+  finally { clearTimeout(id); }
+}
+async function postImageWithRetry(body, tries=2){
+  let lastErr;
+  for (let i=0;i<tries;i++){
+    try{
+      const res = await fetchWithTimeout(WORKER_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify(body), cache:'no-cache', redirect:'follow'
+      }, 20000);
+      if (res.ok) return res;
+      if ([429,500,502,503,504].includes(res.status)){
+        await new Promise(r=>setTimeout(r, 600*(i+1)));
+        continue;
+      }
+      return res;
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('Network failed');
+}
+
+function isLikelyImage(file){
+  if (!file) return false;
+  const okMime = /^image\/(png|jpe?g|webp|heic|gif)$/i.test(file.type);
+  const okExt  = /\.(png|jpe?g|jpg|webp|heic|gif)$/i.test(file.name||'');
+  return okMime || okExt;
+}
+function sanitizeMac(s){
+  const hex = String(s||'').replace(/[^0-9a-f]/gi,'').slice(0,12).toUpperCase();
+  if (hex.length !== 12) return '';
+  return hex.match(/.{1,2}/g).join(':');
+}
+function sanitizeAscii(s, max=64){
+  return String(s||'').replace(/[^\x20-\x7E]/g,'').slice(0,max).trim();
+}
+async function copyTextSafe(txt){
+  try { await navigator.clipboard.writeText(txt); return true; }
+  catch {
+    const ta = document.createElement('textarea'); ta.value=txt; ta.style.position='fixed';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    return true;
+  }
+}
 
 function readFileAsDataURL(file){
   return new Promise((resolve,reject)=>{
@@ -232,7 +252,8 @@ async function compressImageToDataURL(file, maxSize=1000, quality=0.68){
   img.src = dataUrl;
   await new Promise(r => { img.onload = r; img.onerror = r; });
 
-  if (Math.max(img.width, img.height) <= maxSize && dataUrl.length < 3 * 1024 * 1024) {
+  const BASE64_LIMIT = 7 * 1024 * 1024; // ~7 Mo base64
+  if (Math.max(img.width, img.height) <= maxSize && dataUrl.length < (3 * 1024 * 1024)) {
     return dataUrl;
   }
 
@@ -245,18 +266,87 @@ async function compressImageToDataURL(file, maxSize=1000, quality=0.68){
   ctx.drawImage(img, 0, 0, w, h);
 
   let out = canvas.toDataURL('image/jpeg', quality);
-  if (out.length > 3.2 * 1024 * 1024) { out = canvas.toDataURL('image/jpeg', 0.6); }
+  if (out.length > BASE64_LIMIT) { out = canvas.toDataURL('image/jpeg', 0.6); }
   return out;
 }
 
-function normalizeUrlMaybe(u){
-  if(!u) return '';
-  const s = String(u).trim();
-  if(/^https?:\/\//i.test(s)) return s;
-  if(/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(s)) return 'https://' + s;
-  return s;
+/* ---------- App State ---------- */
+function resetAppState() {
+  isBusy = false;
+  currentFile = null;
+  fileInput.value = '';
+
+  runAiBtn.disabled = false;
+  preview.removeAttribute('src');
+  siteLink.textContent=''; siteLink.removeAttribute('href');
+  macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
+
+  setStatus('Prêt.');
+  hideDebug();
 }
 
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    resetAppState();
+  }
+});
+
+/* ---------- UI events ---------- */
+// Toggle camera hint (+ accept tweak) 
+function applyCameraAccept(){
+  if (toggleCamera.checked){
+    fileInput.setAttribute('capture','environment');
+    fileInput.setAttribute('accept','image/*;capture=camera');
+  } else {
+    fileInput.removeAttribute('capture');
+    fileInput.setAttribute('accept','image/*');
+  }
+}
+applyCameraAccept();
+
+toggleCamera.addEventListener('change', applyCameraAccept);
+
+// Copy buttons (with fallback)
+document.addEventListener('click', async (e)=>{
+  const b = e.target.closest('[data-copy]'); if(!b) return;
+  e.preventDefault();
+  const node = document.querySelector(b.getAttribute('data-copy')); if(!node) return;
+  const txt = (node.textContent || node.value || '').trim(); if(!txt) return;
+  await copyTextSafe(txt);
+  setStatus('Copié !','ok'); setTimeout(()=>setStatus('Prêt.'),900);
+});
+
+// Dropzone interactions
+function openFilePicker(){ fileInput.click(); }
+
+drop.addEventListener('click', openFilePicker);
+drop.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openFilePicker(); }});
+
+drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
+drop.addEventListener('drop', e=>{
+  e.preventDefault(); drop.classList.remove('drag');
+  handleFileSelect(e.dataTransfer.files && e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener('change', ()=> handleFileSelect(fileInput.files[0]));
+
+async function handleFileSelect(file) {
+  if (!file) return;
+  if (!isLikelyImage(file)) { setStatus('Fichier non reconnu comme image.', 'warn'); return; }
+  resetAppState();
+  currentFile = file;
+  try {
+    const durl = await readFileAsDataURL(currentFile);
+    preview.src = durl;
+    setStatus('Image chargée. Cliquez sur “Analyser”.');
+    runAiBtn.focus();
+  } catch (e) {
+    setStatus('Erreur de lecture du fichier.', 'warn');
+  }
+}
+
+/* ---------- Vision call ---------- */
 async function runOpenAIVision(e){
   e?.preventDefault();
   if (isBusy) return;
@@ -264,7 +354,6 @@ async function runOpenAIVision(e){
   const file = currentFile || (fileInput.files && fileInput.files[0]);
   if(!file){ setStatus('Choisissez une image.', 'warn'); return; }
 
-  // Ne pas réinitialiser les résultats ici, seulement le statut et le debug
   hideDebug();
   setStatus('Analyse OpenAI…');
   isBusy = true;
@@ -273,115 +362,102 @@ async function runOpenAIVision(e){
   try{
     const dataUrl = await compressImageToDataURL(file, 1000, 0.68);
     if (dataUrl.length > 7 * 1024 * 1024) {
-      throw new Error('Image trop lourde après compression. Recadre ou réduis.');
+      throw new Error('Image trop lourde après compression. Recadrez/réduisez.');
     }
-    preview.src = dataUrl;
 
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept':'application/json' },
-      body: JSON.stringify({ imageDataUrl: dataUrl }),
-      cache: 'no-cache',
-      redirect: 'follow'
-    });
+    const res = await postImageWithRetry({ imageDataUrl: dataUrl });
 
     if(!res.ok){
       const txt = await res.text().catch(()=> '');
       let msg = 'Erreur OpenAI/Proxy';
       try { const j = JSON.parse(txt); if (j?.error) msg = `${msg} : ${j.error} (status ${j.status || res.status})`; }
       catch { msg = `${msg} (HTTP ${res.status})`; }
-      if (res.status === 413) msg = 'Image trop lourde. Réessaie après recadrage / réduction.';
-      
+      if (res.status === 413) msg = 'Image trop lourde. Réessayez après recadrage / réduction.';
+      if (res.status === 429) msg = 'Limite atteinte. Réessayez dans quelques secondes.';
       setStatus(msg, 'warn');
       showDebug('HTTP '+res.status+'\n'+txt.slice(0,500));
-      // On ne réinitialise pas tout, on laisse l'utilisateur voir l'erreur
-      isBusy = false;
-      runAiBtn.disabled = false;
-      return;
+      isBusy = false; runAiBtn.disabled = false; return;
     }
 
     const j = await res.json();
+
     siteLink.textContent=''; siteLink.removeAttribute('href');
     macEl.textContent=''; macPlainEl.textContent=''; dkeyEl.textContent=''; didEl.textContent='';
 
-    const link = normalizeUrlMaybe(j.site);
+    const link = normalizeHttpUrl(j.site);
     if(link){ siteLink.textContent = link; siteLink.href = link; }
 
-    const mac = (j.mac || '').toLowerCase();
+    const mac = sanitizeMac(j.mac);
     macEl.textContent = mac;
-    macPlainEl.textContent = mac ? mac.replace(/:/g,'').toUpperCase() : '';
-    dkeyEl.textContent = j.device_key || '';
-    didEl.textContent  = j.device_id || '';
+    macPlainEl.textContent = mac ? mac.replace(/:/g,'') : '';
+    dkeyEl.textContent = sanitizeAscii(j.device_key, 64);
+    didEl.textContent  = sanitizeAscii(j.device_id, 64);
 
     if(!siteLink.textContent && j){
       const guess = String(JSON.stringify(j)).replace(/[\u2013\u2014]/g,'-').match(/\b(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s"]*)?/i);
-      if(guess){ const g = normalizeUrlMaybe(guess[0]); siteLink.textContent = g; siteLink.href = g; }
+      if(guess){ const g = normalizeHttpUrl(guess[0]); if(g){ siteLink.textContent = g; siteLink.href = g; } }
     }
 
     setStatus('Terminé ✔', 'ok');
 
+    // Amélioration UX: focus sur le premier bouton Copier
+    const firstCopy = document.querySelector('.result .copybtn');
+    if (firstCopy) firstCopy.focus();
+
   } catch(err) {
-    // --- GESTION D'ERREUR AMÉLIORÉE ---
-    // C'est le cas typique d'une connexion "morte" sur mobile.
-    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
-        setStatus('La connexion était en veille. Veuillez réessayer.', 'warn');
+    if (err instanceof TypeError && String(err.message||'').includes('Failed to fetch')) {
+      setStatus('Connexion perdue. Réessayez.', 'warn');
     } else {
-        const msg = (err && (err.message || err.name)) ? `${err.name}: ${err.message}` : 'Échec réseau';
-        setStatus('Erreur : ' + msg, 'warn');
-        showDebug(String(err));
+      const msg = (err && (err.message || err.name)) ? `${err.name}: ${err.message}` : 'Échec réseau';
+      setStatus('Erreur : ' + msg, 'warn');
+      showDebug(String(err));
     }
   } finally {
-    // Dans tous les cas, on débloque l'interface.
     isBusy = false;
     runAiBtn.disabled = false;
   }
 }
 
-async function handleFileSelect(file) {
-  if (file) {
-    resetAppState(); // On réinitialise TOUT avant de charger une nouvelle image
-    currentFile = file;
-    try {
-        const durl = await readFileAsDataURL(currentFile);
-        preview.src = durl;
-        setStatus('Image chargée. Cliquez sur “Analyser”.');
-    } catch (e) {
-        setStatus('Erreur de lecture du fichier.', 'warn');
-    }
-  }
-}
-
-fileInput.addEventListener('change', () => handleFileSelect(fileInput.files[0]));
-drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('drag'); });
-drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
-drop.addEventListener('drop', e=>{
-  e.preventDefault(); drop.classList.remove('drag');
-  handleFileSelect(e.dataTransfer.files[0]);
-});
-
 runAiBtn.addEventListener('click', runOpenAIVision);
 clearBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    resetAppState(); // Le bouton "Effacer" utilise maintenant la fonction centrale
+  e.preventDefault();
+  resetAppState();
+  drop.focus();
 });
 
-
-/* ---------- Générateur M3U (inchangé) ---------- */
+/* ---------- Générateur M3U ---------- */
 (function(){
   const $id = (id) => document.getElementById(id);
   const status = $id('m3uStatus'), nameInput = $id('playlistName'), durationSel = $id('duration'), urlInput = $id('m3uInput'), out = $id('output');
   const f_m3u = $id('x_m3u'), f_user = $id('x_user'), f_pass = $id('x_pass'), f_url = $id('x_url'), f_combo = $id('x_combo');
 
+  function coerceHttpUrl(u){
+    let s=(u||'').trim();
+    if (!s) return '';
+    if (!/^https?:\/\//i.test(s)) s = 'http://' + s;
+    try { return new URL(s).toString(); } catch { return ''; }
+  }
+
   function extract(u){
     const res = {username:'', password:'', origin:'', raw:''};
     try{
-      const url = new URL(u);
+      const u2 = coerceHttpUrl(u);
+      const url = new URL(u2);
       res.origin = url.origin;
       res.username = url.searchParams.get('username') || url.searchParams.get('user') || '';
       res.password = url.searchParams.get('password') || url.searchParams.get('pass') || '';
       res.raw = u;
     }catch(e){}
     return res;
+  }
+
+  function fillExtras(data){
+    if(!data){ f_m3u.value = f_user.value = f_pass.value = f_url.value = f_combo.value = ''; return; }
+    f_m3u.value = data.raw || '';
+    f_user.value = data.username || '';
+    f_pass.value = data.password || '';
+    f_url.value  = data.origin || '';
+    f_combo.value = `Username : ${data.username} / Password : ${data.password} / URL : ${data.origin}`;
   }
 
   function build(){
@@ -407,20 +483,12 @@ clearBtn.addEventListener('click', (e) => {
     fillExtras({raw, username, password, origin});
   }
 
-  function fillExtras(data){
-    if(!data){ f_m3u.value = f_user.value = f_pass.value = f_url.value = f_combo.value = ''; return; }
-    f_m3u.value = data.raw || '';
-    f_user.value = data.username || '';
-    f_pass.value = data.password || '';
-    f_url.value  = data.origin || '';
-    f_combo.value = `Username : ${data.username} / Password : ${data.password} / URL : ${data.origin}`;
-  }
-  
   document.getElementById('generateBtn').addEventListener('click', build);
   document.getElementById('copyBtn').addEventListener('click', ()=> {
       if(!out.value) return;
-      navigator.clipboard.writeText(out.value);
-      const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
+      navigator.clipboard.writeText(out.value).then(()=>{
+        const old = status.textContent; status.textContent = 'Copié !'; setTimeout(()=> status.textContent = old || '', 900);
+      });
   });
   document.getElementById('clearBtn').addEventListener('click', ()=> { urlInput.value=''; out.value=''; fillExtras(null); status.textContent="En attente d'un lien…"; });
   urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); build(); }});
@@ -429,3 +497,4 @@ clearBtn.addEventListener('click', (e) => {
 </script>
 </body>
 </html>
+
